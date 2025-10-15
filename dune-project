@@ -1,4 +1,4 @@
-(lang dune 3.20)
+(lang dune 3.2)
 
 (name les_4_fantastiques)
 
