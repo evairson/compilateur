@@ -1,0 +1,6 @@
+(library
+ (name les_4_fantastiques)
+ (public_name les_4_fantastiques)
+ (modules production types)
+ (modules_without_implementation types)
+)
