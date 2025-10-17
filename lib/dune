@@ -1,6 +1,16 @@
+(menhir
+ (modules parser))
+
+(ocamllex lexer)
+
 (library
  (name les_4_fantastiques)
  (public_name les_4_fantastiques)
- (modules production types)
+ (modules lexer parser types)
  (modules_without_implementation types)
-)
+ (libraries menhirLib))
+
+(executable
+ (name main)
+ (modules main)
+ (libraries les_4_fantastiques))
