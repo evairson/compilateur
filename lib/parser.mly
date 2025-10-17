@@ -33,22 +33,24 @@
 %nonassoc NOT
 %nonassoc uminus
 
-/* Point d'entr�e de la grammaire */
+/* Point d'entree de la grammaire */
 %start prog
 
-/* Type des valeurs retourn�es par l'analyseur syntaxique */
+/* Type des valeurs retournees par l'analyseur syntaxique */
 %type <Ast.expr> expr prog
 
 %%
 
 prog:
 | e=expr EOF                     { e }
+
 expr:
 | c = CST                        { Cst(c,$loc) }
 | e1 = expr o = op e2 = expr     { Binop (o, e1, e2, $loc) }
 | MINUS e = expr %prec uminus    { Neg(e, $loc) } 
 | LP e = expr RP                 { e }
 | LB e = expr LR                 { e }
+| RETURN e = expr SEMI { Return(e,$loc) }
 ;
 
 %inline op:
@@ -56,4 +58,5 @@ expr:
 | MINUS { Sub }
 | MUL { Mul }
 | DIV   { Div }
+| REM {Rem}
 ;
