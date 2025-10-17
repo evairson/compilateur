@@ -1,6 +1,5 @@
 (library
  (name les_4_fantastiques)
  (public_name les_4_fantastiques)
- (modules production types typechecker)
- (modules_without_implementation types)
-)
+ (modules AST1 AST2 typecheck_conversion production)
+ (modules_without_implementation AST1 ) )

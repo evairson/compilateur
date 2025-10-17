@@ -1,4 +1,4 @@
-open Typechecker
+open AST2
 
 let compile_ivalue (v : value) : string =
   match v with 
@@ -6,6 +6,8 @@ let compile_ivalue (v : value) : string =
       Printf.sprintf "   mov $%d, %%eax\n" n
   | Iglobal s -> 
       Printf.sprintf "   lea %s(%%rip), %%rax\n" s
+  | Ireg r -> 
+      Printf.sprintf "   mov %%%s, %%rax\n" r
   
 let compile_expr (e : iexpr) : string =
   match e with 
@@ -19,9 +21,12 @@ let compile_ast (s : iAST) : string =
       expr_code ^ "   ret\n")
   | Ival e -> 
       compile_expr e
-  | Iassign (var, e) ->
-      let expr_code = compile_expr e in
-      expr_code ^ Printf.sprintf "   mov %%rax, %%%s\n" var
+  | Iassign (var, e, size) ->
+      (let expr_code = compile_expr e in
+      match size with
+      | 32 -> expr_code ^ Printf.sprintf "   mov %%eax, %, %%%s\n" var
+      | _ -> expr_code ^ Printf.sprintf "   mov %%rax, %, %%%s\n" var)
+
   | Icall s ->
       Printf.sprintf " xor %%eax, %%eax \n   call %s\n" s
 

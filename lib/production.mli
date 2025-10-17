@@ -1,4 +1,4 @@
-open Typechecker
+open AST2
 
 val compile_program : iprogram -> string -> unit
 

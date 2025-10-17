@@ -1,10 +1,11 @@
-type ppos = Lexing.position
+type ppos = Lexing.position * Lexing.position
 
 type expr =
     | Cst of int*ppos
 
 type  stmt =
     | Print of expr*ppos
+    | Return of expr*ppos
 
 type gdef =
     | Function of string*string*stmt list*ppos

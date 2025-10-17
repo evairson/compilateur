@@ -5,11 +5,11 @@
 .global main 
  main:
    lea fmt(%rip), %rax
-   mov %rax, %rdi
-   mov $42, %eax
-   mov %rax, %esi
+   mov %rax,  %rdi
+   mov $4, %eax
+   mov %eax,  %esi
  xor %eax, %eax 
    call printf
-   mov $0, %eax
+   mov $2, %eax
    ret
 
