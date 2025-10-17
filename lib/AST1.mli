@@ -5,6 +5,7 @@ type expr =
 
 type  stmt =
     | Print of expr*ppos
+    | Return of expr*ppos
 
 type gdef =
     | Function of string*string*stmt list*ppos
