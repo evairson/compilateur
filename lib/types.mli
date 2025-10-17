@@ -1,4 +1,4 @@
-type ppos = Lexing.position * Lexing.position
+type ppos = Lexing.position
 
 type expr =
     | Cst of int*ppos
