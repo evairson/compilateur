@@ -1,10 +1,8 @@
-open Types
+open Typechecker
 
-val compile_program : program -> string -> unit
+val compile_program : iprogram -> string -> unit
 
-val compile_expr : expr -> string
+val compile_ast : iAST -> string
 
-val compile_stmt : stmt -> string
-
-val compile_gdef : gdef -> string
+val compile_expr : iexpr -> string
 

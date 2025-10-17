@@ -1,38 +1,36 @@
-open Types
+open Typechecker
 
-let compile_expr (e : expr) : string =
+let compile_ivalue (v : value) : string =
+  match v with 
+  | Iconst n -> 
+      Printf.sprintf "   mov rax, %d\n" n
+  
+
+let compile_expr (e : iexpr) : string =
   match e with 
-  | Cst (i, _) -> let code = Printf.sprintf "$%d" i in code
+  | Ivalue v -> compile_ivalue v
 
-let compile_stmt (s : stmt) : string =
+
+let compile_ast (s : iAST) : string =
   match s with 
-  | Print (expr, _) -> 
-      let expr_code = compile_expr expr in
-      let expr_mov = Printf.sprintf "    mov %s, %%edi\n" expr_code in
-      expr_mov ^
-      "    lea fmt(%rip), %rsi\n    xor %rax, %rax\n    call printf\n"
+  | Ireturn e -> 
+      (let expr_code = compile_expr e in
+      expr_code ^ "   ret\n")
+  | Ival e -> 
+      compile_expr e
 
-let compile_gdef (g : gdef) : string =
-  match g with
-  | Function (name, _arg, body, _) ->
-      let global_label = Printf.sprintf "global %s \n" name in
-      let func_label = Printf.sprintf "%s:\n" name in
-      let body_code =
-        String.concat ""
-          (List.map (fun stmt -> compile_stmt stmt) body)
-      in
-      let end_code = "    mov $0, %rax\n    ret\n" in
-      global_label ^ func_label ^ body_code ^ end_code
+let compile_asts (name : string) (asts : iAST list) : string =
+  let header = Printf.sprintf "%s:\n" name in
+  let body = List.fold_left (fun acc ast -> acc ^ (compile_ast ast)) "" asts in
+  header ^ body
 
-
-let compile_program (cmd : program) file =
+let compile_program (prg : iprogram) file =
   let oc = open_out file in
-  let print oc s = Printf.fprintf oc "%s\n" s in
-  print oc "section .data";
-  print oc "    fmt: .string \"%%d\\n\"\n";
+  let print oc s = output_string oc (s ^ "\n") in
+  let (cmd, _vars) = prg in
 
   print oc "section .text\n";
   List.iter
-    (fun gdef -> print oc (compile_gdef gdef))
+    (fun (name, asts) -> print oc (compile_asts name asts))
     cmd;
   close_out oc
