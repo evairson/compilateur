@@ -29,9 +29,13 @@ type instr =
   *)
 and seq = instr list
 
-type stmt =
-  | Print of expr * ppos
 
+
+
+
+type  stmt =
+    | Print of expr*ppos
+    | Return of expr*ppos
 
 
 type gdef =
