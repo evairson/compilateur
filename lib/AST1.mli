@@ -6,7 +6,7 @@ type binop = Plus | Minus | Mul | Div | Rem
 (* 
 | Lt  | Le | Gt | Ge | Eq | Neq
 | And | Or | Eqs | Neqs
-*)  (* inutilisé pour ce test *)
+*)  
 
 type expr =
   | Cst    of int * ppos
