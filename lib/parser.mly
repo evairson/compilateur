@@ -1,7 +1,7 @@
 /* Analyseur syntaxique pour notre langage */
 
 %{
-  open Types
+  open AST1
 %}
 
 %token <int> CST
@@ -36,7 +36,7 @@
 %start prog
 
 /* Type des valeurs retournees par l'analyseur syntaxique */
-%type <Types.expr> expr prog
+%type <AST1.expr> expr prog
 
 %%
 

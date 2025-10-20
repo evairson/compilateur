@@ -32,7 +32,7 @@ type token =
   | COMA
   | AFFECT
 val menhir_begin_marker : int
-val xv_prog : Types.expr
-val xv_op : Types.binop
-val xv_expr : Types.expr
+val xv_prog : AST1.expr
+val xv_op : AST1.binop
+val xv_expr : AST1.expr
 val menhir_end_marker : int

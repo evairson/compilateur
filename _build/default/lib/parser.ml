@@ -55,7 +55,7 @@ include MenhirBasics
 
 # 3 "lib/parser.mly"
   
-  open Types
+  open AST1
 
 # 61 "lib/parser.ml"
 
@@ -102,7 +102,7 @@ type ('s, 'r) _menhir_state =
 
 
 and ('s, 'r) _menhir_cell1_expr = 
-  | MenhirCell1_expr of 's * ('s, 'r) _menhir_state * (Types.expr) * Lexing.position * Lexing.position
+  | MenhirCell1_expr of 's * ('s, 'r) _menhir_state * (AST1.expr) * Lexing.position * Lexing.position
 
 and ('s, 'r) _menhir_cell1_MINUS = 
   | MenhirCell1_MINUS of 's * ('s, 'r) _menhir_state * Lexing.position
@@ -114,7 +114,7 @@ and ('s, 'r) _menhir_cell1_RETURN =
   | MenhirCell1_RETURN of 's * ('s, 'r) _menhir_state * Lexing.position
 
 and _menhir_box_prog = 
-  | MenhirBox_prog of (Types.expr) [@@unboxed]
+  | MenhirBox_prog of (AST1.expr) [@@unboxed]
 
 let _menhir_action_01 =
   fun _endpos_c_ _startpos_c_ c ->
@@ -125,7 +125,7 @@ let _menhir_action_01 =
 # 47 "lib/parser.mly"
                                  ( Cst(c,snd _loc) )
 # 128 "lib/parser.ml"
-     : (Types.expr))
+     : (AST1.expr))
 
 let _menhir_action_02 =
   fun _endpos_e2_ _startpos_e1_ e1 e2 ->
@@ -141,7 +141,7 @@ let _menhir_action_02 =
 # 48 "lib/parser.mly"
                                  ( Binop (o, e1, e2, snd _loc) )
 # 144 "lib/parser.ml"
-     : (Types.expr))
+     : (AST1.expr))
 
 let _menhir_action_03 =
   fun _endpos_e2_ _startpos_e1_ e1 e2 ->
@@ -157,7 +157,7 @@ let _menhir_action_03 =
 # 48 "lib/parser.mly"
                                  ( Binop (o, e1, e2, snd _loc) )
 # 160 "lib/parser.ml"
-     : (Types.expr))
+     : (AST1.expr))
 
 let _menhir_action_04 =
   fun _endpos_e2_ _startpos_e1_ e1 e2 ->
@@ -173,7 +173,7 @@ let _menhir_action_04 =
 # 48 "lib/parser.mly"
                                  ( Binop (o, e1, e2, snd _loc) )
 # 176 "lib/parser.ml"
-     : (Types.expr))
+     : (AST1.expr))
 
 let _menhir_action_05 =
   fun _endpos_e2_ _startpos_e1_ e1 e2 ->
@@ -189,7 +189,7 @@ let _menhir_action_05 =
 # 48 "lib/parser.mly"
                                  ( Binop (o, e1, e2, snd _loc) )
 # 192 "lib/parser.ml"
-     : (Types.expr))
+     : (AST1.expr))
 
 let _menhir_action_06 =
   fun _endpos_e2_ _startpos_e1_ e1 e2 ->
@@ -205,7 +205,7 @@ let _menhir_action_06 =
 # 48 "lib/parser.mly"
                                  ( Binop (o, e1, e2, snd _loc) )
 # 208 "lib/parser.ml"
-     : (Types.expr))
+     : (AST1.expr))
 
 let _menhir_action_07 =
   fun _endpos_e_ _startpos__1_ e ->
@@ -216,7 +216,7 @@ let _menhir_action_07 =
 # 49 "lib/parser.mly"
                                ( Unop(Opp, e, snd _loc) )
 # 219 "lib/parser.ml"
-     : (Types.expr))
+     : (AST1.expr))
 
 let _menhir_action_08 =
   fun _endpos__3_ _startpos__1_ e ->
@@ -227,7 +227,7 @@ let _menhir_action_08 =
 # 51 "lib/parser.mly"
                                ( Return(e,snd _loc) )
 # 230 "lib/parser.ml"
-     : (Types.expr))
+     : (AST1.expr))
 
 let _menhir_action_09 =
   fun e ->
@@ -235,7 +235,7 @@ let _menhir_action_09 =
 # 44 "lib/parser.mly"
                                  ( e )
 # 238 "lib/parser.ml"
-     : (Types.expr))
+     : (AST1.expr))
 
 let _menhir_print_token : token -> string =
   fun _tok ->
