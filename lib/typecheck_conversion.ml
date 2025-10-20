@@ -4,6 +4,7 @@ open AST2
 let expr1_to_expr2 (e : expr) : iexpr =
   match e with
   | Cst (n, _) -> Ivalue (Iconst n)
+  | _ -> failwith "expression pas encore pris en compte"
 
   (*renvoie une liste de iAST*)
 let stmt1_to_iAST (s : stmt) : iAST list=
