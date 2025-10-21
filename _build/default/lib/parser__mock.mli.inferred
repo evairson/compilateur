@@ -10,6 +10,7 @@ type token =
   | RB
   | PRINT
   | PLUS
+  | OR
   | NOT
   | NEQS
   | NEQ
@@ -30,9 +31,12 @@ type token =
   | DIV
   | CST of int
   | COMA
+  | AND
   | AFFECT
 val menhir_begin_marker : int
-val xv_prog : AST1.expr
+val xv_stmt : AST1.stmt
+val xv_seq : AST1.seq
+val xv_prog : AST1.seq
 val xv_op : AST1.binop
 val xv_expr : AST1.expr
 val menhir_end_marker : int
