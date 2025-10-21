@@ -13,6 +13,7 @@ type token =
   | RB
   | PRINT
   | PLUS
+  | OR
   | NOT
   | NEQS
   | NEQ
@@ -33,6 +34,7 @@ type token =
   | DIV
   | CST of (int)
   | COMA
+  | AND
   | AFFECT
 
 (* This exception is raised by the monolithic API functions. *)
@@ -41,4 +43,4 @@ exception Error
 
 (* The monolithic API. *)
 
-val prog: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (AST1.expr)
+val prog: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (AST1.seq)
