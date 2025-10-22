@@ -2,9 +2,7 @@ type ppos = Lexing.position
 
 
 type unop  = Opp
-type binop = Plus | Minus | Mul | Div | Rem
-            | Lt  | Le | Gt | Ge | Eq | Neq
-            | And | Or | Eqs | Neqs
+type binop = Plus | Minus | Mul | Div | Rem | Lt  | Le | Gt | Ge | Eq | Neq | And | Or | Eqs | Neqs
 
 
 type expr =
