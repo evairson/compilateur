@@ -4,7 +4,7 @@ open AST2
 open Typecheck_conversion
 open Production
 
-let dummy_pos = (Lexing.dummy_pos, Lexing.dummy_pos)
+let dummy_pos = Lexing.dummy_pos
 
 let prog1 : program =
   [
@@ -21,6 +21,11 @@ let prog1 : program =
 let iprog : iprogram = program1_to_iprogram prog1
 
 let () =
+  let file_name = Sys.argv.(1) in
+  let ic = open_in file_name in
+  let lexbuf = Lexing.from_channel ic in
+  let _ = Les_4_fantastiques.Parser.prog Les_4_fantastiques.Lexer.token lexbuf in
+
   let (functions, symbols) = iprog in
   print_endline "Fonctions converties";
   List.iter
@@ -42,4 +47,5 @@ let () =
   print_endline "Symboles ";
   List.iter (fun (name, value) -> Printf.printf "%s -> %d\n" name value) symbols;
   compile_program iprog "output.s";
-  print_endline "Compilation terminée, voir output.s"
+  print_endline "Compilation terminée, voir output.s";
+  close_in ic
