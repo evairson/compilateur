@@ -3,7 +3,7 @@ open AST1
 open AST2
 open Typecheck_conversion
 
-let dummy_pos = (Lexing.dummy_pos, Lexing.dummy_pos)
+let dummy_pos = Lexing.dummy_pos
 
 let prog1 : program =
   [
