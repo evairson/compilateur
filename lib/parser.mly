@@ -64,6 +64,7 @@ expr:
 | c = CST                        { Cst(c,snd $loc) }
 | e1 = expr o = op e2 = expr     { Binop (o, e1, e2, snd $loc) }
 | MINUS e = expr %prec uminus  { Unop(Opp, e, snd $loc) }
+| LP e=expr RP { e }
 
 ;
 
