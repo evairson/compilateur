@@ -36,11 +36,13 @@
 %start prog
 
 /* Type des valeurs retournees par l'analyseur syntaxique */
-%type <AST1.expr> expr
+
 %type <AST1.program> prog
+%type <AST1.gdef> gdef
+%type <AST1.expr> expr
 %type <AST1.stmt> stmt
 %type <AST1.seq> seq
-%type <AST1.gdef> gdef
+
 
 %%
 
@@ -58,6 +60,9 @@ list_gdef :
 
 gdef:
   |TINT id1=IDENT LP TINT id2=IDENT RP LB s = seq RB { Function (id1, id2, s, snd $loc) }
+  |TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
+  |TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
+  |id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
 ;
 
 expr:
@@ -65,12 +70,20 @@ expr:
 | e1 = expr o = op e2 = expr     { Binop (o, e1, e2, snd $loc) }
 | MINUS e = expr %prec uminus  { Unop(Opp, e, snd $loc) }
 | LP e=expr RP { e }
+| i=IDENT { Var(i,snd $loc) } 
+
+
+
+
 
 ;
 
 stmt:
 | PRINT LP e = expr RP SEMI { Print(e,snd $loc) }
 | RETURN e = expr SEMI { Return(e,snd $loc) }
+| TINT id=IDENT SEMI { Lvar(id, snd $loc) }
+| TINT id=IDENT AFFECT e=expr SEMI { Lvar_affect(id, e, snd $loc) }
+| id=IDENT AFFECT e=expr SEMI { Var_affect(id, e, snd $loc) }
 
 ; 
 
