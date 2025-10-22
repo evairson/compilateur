@@ -14,4 +14,8 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /usr/bin/ocamlc.opt -config > /tmp/dune_6ed014_output
+$ /usr/bin/ocamlc.opt -config > /tmp/dune_cbeac3_output
+$ (cd _build/.sandbox/434bf2c8fa8e8b3fd11e1b0a75ea56ce/default && /home/yassine_alif/.opam/default/bin/menhir lib/parser.mly --base lib/parser --infer-write-query lib/parser__mock.ml.mock)
+> File "lib/parser.mly", line 61, characters 4-7:
+> Error: INT is undefined.
+[1]

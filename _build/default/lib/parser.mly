@@ -30,7 +30,7 @@
 %left OR
 %left AND
 
-%nonassoc NOT
+
 %nonassoc uminus
 
 /* Point d'entree de la grammaire */
@@ -38,12 +38,27 @@
 
 /* Type des valeurs retournees par l'analyseur syntaxique */
 %type <AST1.expr> expr
-%type <AST1.seq> prog
+%type <AST1.program> prog
+%type <AST1.stmt> stmt
+%type <AST1.seq> seq
+%type <AST1.gdef> gdef
 
 %%
 
+
+
 prog:
-| stmts=seq EOF { stmts }
+  | p = list_gdef EOF { p }
+;
+
+
+list_gdef :
+  | g = gdef { [g] }
+  | lgdef = list_gdef g = gdef {lgdef @ [g]}
+;
+
+gdef:
+  | INT id=IDENT LP RP LB s = seq RB { Function (id, t, s, snd $loc) }
 ;
 
 expr:
@@ -82,3 +97,9 @@ seq:
 | EQS   { Eqs }
 | NEQS   { Neqs }
 ;
+
+%inline tp:
+
+|TBOOL  {TBool}
+|TVOID  {TVoid}
+|TINT {TInt}

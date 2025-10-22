@@ -43,4 +43,4 @@ exception Error
 
 (* The monolithic API. *)
 
-val prog: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (AST1.seq)
+val prog: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (AST1.program)
