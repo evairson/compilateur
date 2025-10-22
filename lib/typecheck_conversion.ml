@@ -11,11 +11,13 @@ let stmt1_to_iAST (s : stmt) : iAST list=
   match s with
   | Print (e, _) -> [Iassign("rdi", Ivalue(Iglobal "fmt"), 64); Iassign ("esi", expr1_to_expr2 e, 32); Icall "printf"]
   | Return (e, _) -> [Ireturn (expr1_to_expr2 e)]
+  | _ -> failwith "expression pas encore pris en compte"
 
 let gdef1_to_iAST_list (g : gdef) : (string * iAST list) =
   match g with
   | Function (name, _arg, stmts, _) ->
       (name, List.flatten (List.map stmt1_to_iAST stmts)) (*On concatene les differentes listes de iAST*)
+  | _ -> failwith "expression pas encore pris en compte"
 
 let program1_to_iprogram (p : program) : iprogram =
   let functions = List.map gdef1_to_iAST_list p in
