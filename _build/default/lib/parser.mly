@@ -7,7 +7,7 @@
 %token <int> CST
 %token <string> IDENT
 %token EOF 
-%token LP RP LB RB SEMI COMA
+%token LP RP LB RB SEMI COMMA
 %token PLUS MINUS MUL DIV REM
 
 %token PRINT
@@ -30,7 +30,7 @@
 %left OR
 %left AND
 
-
+%nonassoc NOT
 %nonassoc uminus
 
 /* Point d'entree de la grammaire */
@@ -58,7 +58,7 @@ list_gdef :
 ;
 
 gdef:
-  | INT id=IDENT LP RP LB s = seq RB { Function (id, t, s, snd $loc) }
+  | t=tp id=IDENT LP RP LB s = seq RB { Function (id, t, s, snd $loc) }
 ;
 
 expr:

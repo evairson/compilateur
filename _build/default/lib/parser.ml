@@ -47,7 +47,7 @@ module MenhirBasics = struct
        (int)
 # 49 "lib/parser.ml"
   )
-    | COMA
+    | COMMA
     | AND
     | AFFECT
   
@@ -615,8 +615,8 @@ let _menhir_print_token : token -> string =
         "AFFECT"
     | AND ->
         "AND"
-    | COMA ->
-        "COMA"
+    | COMMA ->
+        "COMMA"
     | CST _ ->
         "CST"
     | DIV ->

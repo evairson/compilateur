@@ -33,7 +33,7 @@ type token =
   | ELSE
   | DIV
   | CST of (int)
-  | COMA
+  | COMMA
   | AND
   | AFFECT
 

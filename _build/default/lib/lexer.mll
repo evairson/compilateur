@@ -1,5 +1,6 @@
 {
   open Parser
+  open Lexing
 }
 
 
@@ -7,7 +8,7 @@ let letter  = ['a'-'z' 'A'-'Z']
 let digit   = ['0'-'9']
 let integer = digit+
 let space   = [' ' '\t']
-let number  = ('-'? digit+)
+let number  = ('-'? integer)
 let ident   = (letter | '_') (letter | '_' | digit)*
 
 rule token = parse
@@ -17,25 +18,38 @@ rule token = parse
   | '-'     { MINUS }
   | '*'     { MUL }
   | '/'     { DIV }
-  | '='     { AFFECT }
   | "=="    { EQ }
+  | '='     { AFFECT }
 
-  | ','     { COMA }
+  | ','     { COMMA }
   | ';'     { SEMI }
   | '('     { LP }
   | ')'     { RP }
   | '{'     { LB }
   | '}'     { RB }
 
-  | eof     { EOF }
   | "printf" { PRINT }
-  | '='     { AFFECT }
-  
+
+  | "&&" { AND }
+  | "||" { OR }
+  | "!"  { NOT }
+  | "<"  { LT }
+  | "<=" { LE }
+  | ">"  { GT }
+  | ">=" { GE }
+  | "!=" { NEQ }
+
   | "if"     { IF }
   | "else"   { ELSE }
   | "while"  { WHILE }
   | "return" { RETURN }
 
-  | integer  { CST(int_of_string (Lexing.lexeme lexbuf)) }
-  | ident    { IDENT (Lexing.lexeme lexbuf) }
+  | "int"   { TINT }
+  | "void"  { TVOID }
+  | "bool"  { TBOOL }
+
+  | integer  { CST(int_of_string (lexeme lexbuf)) }
+  | ident    { IDENT (lexeme lexbuf) }
   | space+   { token lexbuf }
+  | eof      { EOF }
+
