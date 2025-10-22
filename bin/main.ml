@@ -60,8 +60,10 @@ let () =
                   Printf.printf "  Print(Cst %d)\n" n
               | Return (Cst (n, _), _) ->
                   Printf.printf "  Return(Cst %d)\n" n
-              | _ -> Printf.printf "  Autre instruction inconnue\n")
-            stmts)
+              | _ -> failwith "  Autre instruction inconnue")
+            stmts
+      | _ -> failwith "autre instruction inconnue" 
+    )
     prog; 
   let iprog = program1_to_iprogram prog in
   print_endline "Programme parsé et converti en iAST:";
@@ -80,7 +82,7 @@ let () =
               Printf.printf "  Iassign(%s, Ireg %s)\n" v r
           | Icall fname -> Printf.printf "  Icall(%s)\n" fname
           | Ireturn (Ivalue (Iconst n)) -> Printf.printf "  Ireturn(Iconst %d)\n" n
-          | _ -> Printf.printf "  Autre instruction inconnue\n")
+          | _ -> failwith "  Autre instruction inconnue\n")
         body)
     functions;
   print_endline "Symboles ";
