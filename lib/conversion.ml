@@ -5,23 +5,23 @@ let expr1_to_expr2 (e : expr) : iexpr =
   match e with
   | Cst (n, _) -> Ivalue (Iconst n)
   | Unop(op, e1, _) ->
-      let v =
-        match e1 with
-        | Cst (n, _) -> Iconst n
-        | _ -> failwith "Expression non supportee dans Unop"
-      in
-      Iunop (op, v)
+    let v =
+      match e1 with
+      | Cst (n, _) -> Iconst n
+      | _ -> failwith "Expression non supportee dans Unop"
+    in
+    Iunop (op, v)
   | Binop(op, e1, e2, _) ->
-      let v1 =
-        match e1 with
-        | Cst (n, _) -> Iconst n
-        | _ -> failwith "Expression non supportee dans Binop"
-      in
-      let v2 =
-        match e2 with
-        | Cst (n, _) -> Iconst n
-        | _ -> failwith "Expression non supportee dans Binop"
-      in
+    let v1 =
+      match e1 with
+      | Cst (n, _) -> Iconst n
+      | _ -> failwith "Expression non supportee dans Binop"
+    in
+    let v2 =
+      match e2 with
+      | Cst (n, _) -> Iconst n
+      | _ -> failwith "Expression non supportee dans Binop"
+    in
     Ibinop (op, v1, v2)
 
   (*renvoie une liste de iAST*)

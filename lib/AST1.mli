@@ -1,8 +1,7 @@
 type ppos = Lexing.position
 
 type unop  = Opp
-type binop = Plus | Minus | Mul | Div | Rem | Lt  | Le | Gt | Ge | Eq | Neq | And | Or | Eqs | Neqs
-
+type binop = Plus | Minus | Mul | Div | Rem 
 
 type expr =
   | Cst    of int * ppos
@@ -16,7 +15,6 @@ type  stmt =
     | If     of expr * seq * seq * ppos * ppos *)
 
 and seq = stmt list
-
 
 type gdef =
   | Function of string * string * stmt list * ppos

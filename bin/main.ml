@@ -1,7 +1,8 @@
 open Les_4_fantastiques
 open AST1
 open AST2
-open Typecheck_conversion
+open Typechecker
+open Conversion
 
 let dummy_pos = Lexing.dummy_pos
 
@@ -14,14 +15,24 @@ let prog1 : program =
       Return (Cst (42, dummy_pos), dummy_pos)
       ],  
       dummy_pos
-    );
+    )
   ]
+
+let () =
+  begin
+    try
+      type_program prog1;
+      print_endline "Typechecking reussi"
+    with
+    | TypeError msg ->
+        Printf.eprintf "Erreur de typage : %s\n" msg;
+        exit 1
+  end
 
 let iprog : iprogram = program1_to_iprogram prog1
 
 let () =
   let (functions, symbols) = iprog in
-  print_endline "Fonctions converties";
   List.iter
     (fun (name, body) ->
       Printf.printf "Function %s:\n" name;
@@ -39,4 +50,5 @@ let () =
         body)
     functions;
   print_endline "Symboles ";
-  List.iter (fun (name, value) -> Printf.printf "%s -> %d\n" name value) symbols
+  List.iter (fun (name, value) -> Printf.printf "%s -> %d\n" name value) symbols;
+  print_endline "Fonctions converties";
