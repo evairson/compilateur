@@ -7,7 +7,7 @@
 %token <int> CST
 %token <string> IDENT
 %token EOF 
-%token LP RP LB RB SEMI COMMA
+%token LP RP LB RB SEMI COMMA TINT
 %token PLUS MINUS MUL DIV REM
 
 %token PRINT
@@ -19,7 +19,6 @@
 
 %token IF ELSE WHILE RETURN
 
-%token TBOOL TVOID TINT
 
 /* priorites et associativites des tokens */
 
@@ -58,7 +57,7 @@ list_gdef :
 ;
 
 gdef:
-  | t=tp id=IDENT LP RP LB s = seq RB { Function (id, t, s, snd $loc) }
+  |TINT id1=IDENT LP TINT id2=IDENT RP LB s = seq RB { Function (id1, id2, s, snd $loc) }
 ;
 
 expr:
@@ -69,7 +68,7 @@ expr:
 ;
 
 stmt:
-| PRINT e = expr SEMI { Print(e,snd $loc) }
+| PRINT LP e = expr RP SEMI { Print(e,snd $loc) }
 | RETURN e = expr SEMI { Return(e,snd $loc) }
 
 ; 
@@ -98,8 +97,3 @@ seq:
 | NEQS   { Neqs }
 ;
 
-%inline tp:
-
-|TBOOL  {TBool}
-|TVOID  {TVoid}
-|TINT {TInt}

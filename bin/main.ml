@@ -18,14 +18,53 @@ let prog1 : program =
     );
   ]
 
-let iprog : iprogram = program1_to_iprogram prog1
-
 let () =
   let file_name = Sys.argv.(1) in
   let ic = open_in file_name in
-  let lexbuf = Lexing.from_channel ic in
-  let _ = Les_4_fantastiques.Parser.prog Les_4_fantastiques.Lexer.token lexbuf in
+  let lexbuf = try
+     Lexing.from_channel ic
+  with e ->
+     Printf.eprintf "Erreur lors de l'ouverture du fichier : %s\n" (Printexc.to_string e);
+     exit 1
+  in
 
+  let prog = try
+    Les_4_fantastiques.Parser.prog Les_4_fantastiques.Lexer.token lexbuf
+  with e ->
+    let pos = lexbuf.Lexing.lex_curr_p in
+    let line = pos.Lexing.pos_lnum in
+    let col = pos.Lexing.pos_cnum - pos.Lexing.pos_bol in
+    let lexeme =
+      try Lexing.lexeme lexbuf with _ -> "<end of input>"
+    in
+    begin
+      match e with
+      | Parsing.Parse_error ->
+        Printf.eprintf "Parse error (Menhir) at line %d, column %d: near '%s'\n" line col lexeme
+      | _ ->
+        Printf.eprintf "Erreur lors de l'analyse du programme: %s\n  at line %d, column %d: near '%s'\n"
+        (Printexc.to_string e) line col lexeme
+    end;
+    exit 1
+  in
+
+  print_endline "Programme parsé:";
+  List.iter
+    (fun gdef ->
+      match gdef with
+      | Function (name, _arg, stmts, _) ->
+          Printf.printf "Function %s:\n" name;
+          List.iter
+            (function
+              | Print (Cst (n, _), _) ->
+                  Printf.printf "  Print(Cst %d)\n" n
+              | Return (Cst (n, _), _) ->
+                  Printf.printf "  Return(Cst %d)\n" n
+              | _ -> Printf.printf "  Autre instruction inconnue\n")
+            stmts)
+    prog; 
+  let iprog = program1_to_iprogram prog in
+  print_endline "Programme parsé et converti en iAST:";
   let (functions, symbols) = iprog in
   print_endline "Fonctions converties";
   List.iter

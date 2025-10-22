@@ -1,9 +1,5 @@
 type ppos = Lexing.position
 
-type typ =
-  |TBool  
-  |TVoid  
-  |TInt 
 type unop  = Opp
 type binop = Plus | Minus | Mul | Div | Rem | Lt  | Le | Gt | Ge | Eq | Neq | And | Or | Eqs | Neqs
 
@@ -21,8 +17,7 @@ type  stmt =
 
 and seq = stmt list
 
-
 type gdef =
-  | Function of string * typ * seq * ppos
+  | Function of string * string * seq * ppos
 
 type program = gdef list

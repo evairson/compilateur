@@ -28,7 +28,7 @@ rule token = parse
   | '{'     { LB }
   | '}'     { RB }
 
-  | "printf" { PRINT }
+  | "print_int" { PRINT }
 
   | "&&" { AND }
   | "||" { OR }
@@ -45,11 +45,11 @@ rule token = parse
   | "return" { RETURN }
 
   | "int"   { TINT }
-  | "void"  { TVOID }
-  | "bool"  { TBOOL }
 
   | integer  { CST(int_of_string (lexeme lexbuf)) }
   | ident    { IDENT (lexeme lexbuf) }
   | space+   { token lexbuf }
   | eof      { EOF }
 
+  | ['\n']            { new_line lexbuf; token lexbuf }
+  | [' ' '\t' '\r']+  { token lexbuf }
