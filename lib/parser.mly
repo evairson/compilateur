@@ -1,0 +1,129 @@
+/* Analyseur syntaxique pour notre langage */
+
+%{
+  open AST1
+%}
+
+%token <int> CST
+%token <string> IDENT
+%token EOF 
+%token LP RP LB RB SEMI COMMA TINT
+%token PLUS MINUS MUL DIV REM
+
+%token PRINT
+%token AFFECT
+
+%token LT LE GT GE EQ NEQ EQS NEQS
+
+%token AND OR NOT
+
+%token IF ELSE WHILE RETURN
+
+
+/* priorites et associativites des tokens */
+
+%left PLUS MINUS 
+%left MUL DIV REM
+%left LT LE GT GE
+%left EQ NEQ EQS NEQS
+%left OR
+%left AND
+
+%nonassoc NOT
+%nonassoc uminus
+
+/* Point d'entree de la grammaire */
+%start prog
+
+/* Type des valeurs retournees par l'analyseur syntaxique */
+
+%type <AST1.program> prog
+%type <AST1.gdef> gdef
+%type <AST1.expr> expr
+%type <AST1.stmt> stmt
+%type <AST1.seq> seq
+
+
+%%
+
+
+
+prog:
+  | p = list_gdef EOF { p }
+;
+
+
+list_gdef :
+  | g = gdef { [g] }
+  | lgdef = list_gdef g = gdef {lgdef @ [g]}
+;
+
+gdef:
+  
+  |TINT id1=IDENT LP TINT id2=IDENT RP LB s = seq RB { Function (id1, id2, s, snd $loc) }
+  // |TINT id=IDENT LP RP LB s=seq RB { Function  (id,None,s,snd $loc) }
+  // |TINT id1=IDENT LP TINT params=param_list RP LB s = seq RB { Function (id1, Some params, s, snd $loc) }
+  // |TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
+  // |TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
+  // |id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
+;
+
+// param_list :
+//   | TINT id=IDENT {[id]}
+//   | p=param_list COMMA TINT id=IDENT {p@[id]}
+// ;
+
+expr:
+| c = CST                        { Cst(c,snd $loc) }
+| e1 = expr o = op e2 = expr     { Binop (o, e1, e2, snd $loc) }
+| MINUS e = expr %prec uminus  { Unop(Opp, e, snd $loc) }
+| LP e=expr RP { e }
+// | NOT e = expr  { Unop(Not, e, snd $loc) }
+// | i=IDENT { Var(i,snd $loc) } 
+// | id=IDENT LP RP {Call(id,[],fst $loc,snd $loc)}
+// | id=IDENT LP args=arg_list RP {Call(id,args,fst $loc, snd $loc)}
+
+;
+
+// arg_list:
+//   |e=expr {[e]}
+//   |l=arg_list COMMA e=expr {l@[e]}
+
+// ;
+
+stmt:
+| PRINT LP e = expr RP SEMI { Print(e,snd $loc) }
+| RETURN e = expr SEMI { Return(e,snd $loc) }
+// | TINT id=IDENT SEMI { Lvar(id, snd $loc) }
+// | TINT id=IDENT AFFECT e=expr SEMI { Lvar_affect(id, e, snd $loc) }
+// | id=IDENT AFFECT e=expr SEMI { Var_affect(id, e, snd $loc) }
+// | IF LP e = expr RP LB s=seq RB { If(e,s,None,fst $loc, snd $loc)}
+// | IF LP e = expr RP LB s1=seq RB ELSE LB s2=seq RB { If(e,s1,Some s2,fst $loc, snd $loc)}
+// | WHILE LP e=expr RP LB s=seq RB {While(e,s,fst $loc,snd $loc)}
+
+; 
+
+seq:
+| s=stmt { [s] }
+| s=seq s2=stmt { s @ [s2] }
+;
+
+
+%inline op:
+| PLUS  { Plus }
+| MINUS { Minus }
+| MUL   { Mul }
+| DIV   { Div }
+| REM   { Rem }
+| LT { Lt }
+| LE   { Le }
+| GT   { Gt }
+| GE   { Ge }
+| EQ { Eq }
+| NEQ   { Neq }
+| AND   { And }
+| OR   { Or }
+| EQS   { Eqs }
+| NEQS   { Neqs }
+;
+
