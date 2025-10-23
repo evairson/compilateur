@@ -19,6 +19,8 @@ let prog1 : program =
     )
   ]
 
+
+
 let () =
   let file_name = Sys.argv.(1) in
   let ic = open_in file_name in
@@ -61,14 +63,31 @@ let () =
                   Printf.printf "  Print(Cst %d)\n" n
               | Return (Cst (n, _), _) ->
                   Printf.printf "  Return(Cst %d)\n" n
-              | _ -> failwith "  Autre instruction inconnue")
+              | _ -> failwith "  Autre instruction inconnue1")
             stmts
-      | _ -> failwith "autre instruction inconnue" 
-    )
-    prog; 
+      | _ -> failwith "autre instruction inconnue"
+    ) prog;
+
+  print_endline "Programme typé";
+  begin
+    try
+      type_program prog;
+      print_endline "Le programme est bien type"
+    with
+    | Typechecker.TypeError msg ->
+        Printf.eprintf "Erreur de typage : %s\n" msg;
+        exit 1
+    | e ->
+        Printf.eprintf "Erreur pas traitee typage : %s\n" (Printexc.to_string e);
+        exit 1
+  end;
+
   let iprog = program1_to_iprogram prog in
   print_endline "Programme parsé et converti en iAST:";
+  
   let (functions, symbols) = iprog in
+  (*Il faut modifier l'affichage pour les iAST*)
+  (*
   List.iter
     (fun (name, body) ->
       Printf.printf "Function %s:\n" name;
@@ -82,9 +101,9 @@ let () =
               Printf.printf "  Iassign(%s, Ireg %s)\n" v r
           | Icall fname -> Printf.printf "  Icall(%s)\n" fname
           | Ireturn (Ivalue (Iconst n)) -> Printf.printf "  Ireturn(Iconst %d)\n" n
-          | _ -> failwith "  Autre instruction inconnue\n")
+          | _ -> failwith "  Autre instruction inconnue2\n")
         body)
-    functions;
+    functions;*)
   print_endline "Symboles ";
   List.iter (fun (name, value) -> Printf.printf "%s -> %d\n" name value) symbols;
   compile_program iprog "output.s";
