@@ -8,7 +8,7 @@ type  stmt =
     | Return of expr*ppos
 
 type gdef =
-    | Function of string*string*stmt list*ppos
+    | Function of string*string*stmt list*ppos (* name, arg, body, pos *)
 
 type program = gdef list
 
