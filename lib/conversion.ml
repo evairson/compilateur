@@ -7,15 +7,11 @@ let rec expr_to_iexpr (e : expr) : iexpr =
   | Binop (op, e1, e2, _) ->
       let v1 = expr_to_iexpr e1 in
       let v2 = expr_to_iexpr e2 in
-      (match v1, v2 with
-       | Ivalue val1, Ivalue val2 -> Ibinop (op, val1, val2)
-       | _ -> failwith "binop pas implemente")
+      Ibinop (op, v1, v2)
 
   | Unop (op, e1, _) ->
       let v1 = expr_to_iexpr e1 in
-      (match v1 with
-       | Ivalue val_ -> Iunop (op, val_)
-       | _ -> failwith "unop pas implemente")
+      Iunop (op, v1)
 
   | _ -> failwith " expression pas implemente"
 

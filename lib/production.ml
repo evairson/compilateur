@@ -21,25 +21,30 @@ let compile_ivalue (v : value) : string =
   | Ileft left -> compile_left_value left
       
   
-let compile_expr (e : iexpr) : string =
+let rec compile_expr (e : iexpr) : string =
   match e with 
   | Ivalue v -> 
     compile_ivalue v
   | Iunop (op, v) ->
-      let v_code = compile_ivalue v in
+      let v_code = compile_expr v in
       begin match op with
       | Opp -> v_code ^ "   pop %rax\n   neg %rax\n   push %rax\n"
       | Not -> v_code ^ "   pop %rax\n   not %rax\n   push %rax\n"
       end
   | Ibinop (op, v1, v2) ->
-      let _v1_code = compile_ivalue v1 in
-      let _v2_code = compile_ivalue v2 in
+      let v1_code = compile_expr v1 in
+      let v2_code = compile_expr v2 in
       begin match op with
-      | Plus -> "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
-      | Minus -> "    pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
-      | Mul -> "    pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
-      | Div -> "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
-      | Rem -> "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
+      | Plus -> v1_code ^ v2_code ^
+      "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
+      | Minus ->  v1_code ^ v2_code ^
+        "    pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
+      | Mul ->  v1_code ^ v2_code ^
+        "    pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
+      | Div ->  v1_code ^ v2_code ^
+        "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
+      | Rem ->  v1_code ^ v2_code ^
+        "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
       | _ -> failwith "Operation binaire pas encore implementee"
       end
 
