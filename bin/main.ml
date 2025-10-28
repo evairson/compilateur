@@ -1,6 +1,5 @@
 open Les_4_fantastiques
 open AST1
-open AST2
 open Typechecker
 open Conversion
 open Production
@@ -63,9 +62,9 @@ let () =
                   Printf.printf "  Print(Cst %d)\n" n
               | Return (Cst (n, _), _) ->
                   Printf.printf "  Return(Cst %d)\n" n
-              | _ -> failwith "  Autre instruction inconnue1")
+              | _ -> Printf.printf "  Autre instruction inconnue1")
             stmts
-      | _ -> failwith "autre instruction inconnue"
+      | _ -> Printf.printf "autre instruction inconnue"
     ) prog;
 
   print_endline "Programme typé";
@@ -85,7 +84,7 @@ let () =
   let iprog = program1_to_iprogram prog in
   print_endline "Programme parsé et converti en iAST:";
   
-  let (functions, symbols) = iprog in
+  let (_functions, symbols) = iprog in
   (*Il faut modifier l'affichage pour les iAST*)
   (*
   List.iter
