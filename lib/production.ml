@@ -11,8 +11,8 @@ let compile_left_value (lv : left_value) : string =
   match lv with
   | (pos, size) -> let compile_pos = compile_pos pos in
       match size with
-      | 32 -> Printf.sprintf "   mov %s, %%eax\n   push %%eax\n" compile_pos
-      | _ -> Printf.sprintf "   mov %s, %%rax\n   push %%rax\n" compile_pos
+      | 32 -> Printf.sprintf "   lea %s, %%eax\n   push %%eax\n" compile_pos
+      | _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" compile_pos
 
 let compile_ivalue (v : value) : string =
   match v with 
@@ -60,8 +60,8 @@ let compile_ast (ast : iAST) : string =
   | Iassign ((pos, size), e) ->
       let expr_code = compile_expr e in
       (match size with
-      | 32 -> expr_code ^ Printf.sprintf "   mov %%eax, %s\n" (compile_pos pos)
-      | _ -> expr_code ^ Printf.sprintf "   mov %%rax, %s\n" (compile_pos pos))
+      | 32 -> expr_code ^ Printf.sprintf "    pop %s\n" (compile_pos pos)
+      | _ -> expr_code ^ Printf.sprintf "   pop %s\n" (compile_pos pos))
 
   | Icall s ->
       Printf.sprintf "   xor %%eax, %%eax \n   call %s\n" s
