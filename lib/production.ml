@@ -3,21 +3,28 @@ open AST2
 (*Tentative d'ajout*)
 let compile_pos (p : pos) : string =
   match p with
-  | Ilocal i -> Printf.sprintf "-%d(%%rbp)" (8 * i) (*Pas sure*)
-  | Iglobal s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
+  | Ilocal i -> Printf.sprintf "-%d(%%rbp)" (8 * i)
+  | Iglobal s -> Printf.sprintf "%s(%%rip)" s
+  | Ireg s -> Printf.sprintf "%%%s" s
+
+let compile_left_value (lv : left_value) : string =
+  match lv with
+  | (pos, size) -> let compile_pos = compile_pos pos in
+      match size with
+      | 32 -> Printf.sprintf "   mov %s, %%eax\n   push %%eax\n" compile_pos
+      | _ -> Printf.sprintf "   mov %s, %%rax\n   push %%rax\n" compile_pos
 
 let compile_ivalue (v : value) : string =
   match v with 
   | Iconst n -> 
       Printf.sprintf "   push $%d\n" n
-  | Ileft (lv, _) ->
-      (match lv with
-       | Ilocal i -> Printf.sprintf "   mov -%d(%%rbp), %%rax\n   push %%rax\n" (8 * i)
-       | Iglobal s -> Printf.sprintf  "   mov %s(%%rip), %%rax\n   push %%rax\n" s)
+  | Ileft left -> compile_left_value left
+      
   
 let compile_expr (e : iexpr) : string =
   match e with 
-  | Ivalue v -> compile_ivalue v
+  | Ivalue v -> 
+    compile_ivalue v
   | Iunop (op, v) ->
       let v_code = compile_ivalue v in
       begin match op with
@@ -44,12 +51,6 @@ let compile_ast (ast : iAST) : string =
 
   | Ival e -> 
       compile_expr e
-  (* A modifier. Maintenant Iassign ((pos, size), iexpr) pos est un int generer pour chaque nouvelle allocation. Je ne sais pas trop comment convertir ca en var*)
-  (*| Iassign (var, e, size) ->
-      (let expr_code = compile_expr e in
-      match size with
-      | 32 -> expr_code ^ Printf.sprintf "   mov %%eax, %, %%%s\n" var
-      | _ -> expr_code ^ Printf.sprintf "   mov %rax, %, %%%s\n" var)*)
 
   | Iassign ((pos, size), e) ->
       let expr_code = compile_expr e in

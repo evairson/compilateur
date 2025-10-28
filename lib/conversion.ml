@@ -7,8 +7,8 @@ let rec expr_to_iexpr (e : expr) : iexpr =
   | Binop (op, e1, e2, _) ->
       let v1 = expr_to_iexpr e1 in
       let v2 = expr_to_iexpr e2 in
-      (match (v1, v2) with
-       | (Ivalue val1, Ivalue val2) -> Ibinop (op, val1, val2)
+      (match v1, v2 with
+       | Ivalue val1, Ivalue val2 -> Ibinop (op, val1, val2)
        | _ -> failwith "binop pas implemente")
 
   | Unop (op, e1, _) ->
@@ -23,11 +23,12 @@ let rec expr_to_iexpr (e : expr) : iexpr =
 let stmt_to_iAST (s : stmt) : iAST list=
   match s with
   | Print (e, _) -> let v = expr_to_iexpr e in
-      [ Iassign ((Ireg "rdi", 8), v); 
+      [ Iassign ((Ireg "rdi", 32), Ivalue ( Ileft ((Iglobal "fmt"), 32)));
+        Iassign ((Ireg "rsi", 32), v); 
         Icall "printf" ] 
 
   | Return (e, _) -> let v = expr_to_iexpr e in
-      [ Ireturn (Ivalue v) ]
+      [ Ireturn (v) ]
 
   | _ -> failwith "stmt non géré"
 
