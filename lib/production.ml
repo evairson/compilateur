@@ -21,18 +21,18 @@ let compile_expr (e : iexpr) : string =
   | Iunop (op, v) ->
       let v_code = compile_ivalue v in
       begin match op with
-      | Opp -> v_code ^ "   pop %%rax\n   neg %%rax\n   push %%rax\n"
-      | Not -> v_code ^ "   pop %%rax\n   not %%rax\n   push %%rax\n"
+      | Opp -> v_code ^ "   pop %rax\n   neg %rax\n   push %rax\n"
+      | Not -> v_code ^ "   pop %rax\n   not %rax\n   push %rax\n"
       end
   | Ibinop (op, v1, v2) ->
       let _v1_code = compile_ivalue v1 in
       let _v2_code = compile_ivalue v2 in
       begin match op with
-      | Plus -> "   pop %%rbx\n   pop %%rax\n   add %%rbx, %%rax\n   push %%rax\n"
-      | Minus -> "    pop %%rbx\n   pop %%rax\n   sub %%rbx, %%rax\n   push %%rax\n"
-      | Mul -> "    pop %%rbx\n   pop %%rax\n   imul %%rbx, %%rax\n   push %%rax\n"
-      | Div -> "    pop %%rbx\n   pop %%rax\n   xor %%rdx, %%rdx\n   idiv %%rbx\n   push %%rax\n"
-      | Rem -> "    pop %%rbx\n   pop %%rax\n   xor %%rdx, %%rdx\n   idiv %%rbx\n   push %%rdx\n"
+      | Plus -> "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
+      | Minus -> "    pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
+      | Mul -> "    pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
+      | Div -> "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
+      | Rem -> "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
       | _ -> failwith "Operation binaire pas encore implementee"
       end
 
@@ -40,7 +40,7 @@ let compile_ast (ast : iAST) : string =
   match ast with 
   | Ireturn e -> 
       (let expr_code = compile_expr e in
-      expr_code ^ "   ret\n")
+      expr_code ^ "   pop %rax\n   ret\n")
 
   | Ival e -> 
       compile_expr e
@@ -49,7 +49,7 @@ let compile_ast (ast : iAST) : string =
       (let expr_code = compile_expr e in
       match size with
       | 32 -> expr_code ^ Printf.sprintf "   mov %%eax, %, %%%s\n" var
-      | _ -> expr_code ^ Printf.sprintf "   mov %%rax, %, %%%s\n" var)*)
+      | _ -> expr_code ^ Printf.sprintf "   mov %rax, %, %%%s\n" var)*)
 
   | Iassign ((pos, size), e) ->
       let expr_code = compile_expr e in

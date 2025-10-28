@@ -6,4 +6,4 @@ dune exec bin/main.exe $1
 gcc output.s -o output -no-pie
 
 # lancer le programme
-#./output
+./output
