@@ -26,10 +26,7 @@ and seq = stmt list
 
 type gdef =
   | Function of string * string * seq * ppos
-(*il faut changer la ligne du dessus par la ligne suivante
-le code correspondant est commenté sur parser*)
-  (* | Function of string * (string list) option * seq * ppos *)
-  | Gvar of string*ppos
-  | Gvar_affect of string * expr * ppos 
+  | Gvar of string * ppos
+  | Gvar_affect of string * expr * ppos
 
 type program = gdef list
