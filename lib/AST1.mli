@@ -15,7 +15,6 @@ type expr =
 type  stmt =
     | Print of expr*ppos
     | Return of expr*ppos
-
     | Lvar of string*ppos
     | Lvar_affect of string * expr * ppos
     | Var_affect of string * expr * ppos
