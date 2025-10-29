@@ -19,8 +19,8 @@ let rec expr_to_iexpr (e : expr) : iexpr =
 let stmt_to_iAST (s : stmt) : iAST list=
   match s with
   | Print (e, _) -> let v = expr_to_iexpr e in
-      [ Iassign ((Ireg "rdi", 32), Ivalue ( Ileft ((Iglobal "fmt"), 32)));
-        Iassign ((Ireg "rsi", 32), v); 
+      [ Iassign ((Ireg "rdi", 64), Ivalue ( Ileft ((Iglobal "fmt"), 64)));
+        Iassign ((Ireg "rsi", 64), v); 
         Icall "printf" ] 
 
   | Return (e, _) -> let v = expr_to_iexpr e in
