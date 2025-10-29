@@ -15,7 +15,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
 
   | Var (name, _) ->
       if List.mem_assoc name globales then
-        Ivalue (Ileft (Iglobal name, 32))
+        Ivalue (Ileft (Iglobal name, 64))
       else
         failwith ("Variable non declaree: " ^ name)
 
@@ -25,8 +25,8 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
 let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list=
   match s with
   | Print (e, _) -> let v = expr_to_iexpr e globales in
-      [ Iassign ((Ireg "rdi", 32), Ivalue ( Ileft ((Iglobal "fmt"), 32)));
-        Iassign ((Ireg "rsi", 32), v); 
+      [ Iassign ((Ireg "rdi", 64), Ivalue ( Ileft ((Iglobal "fmt"), 64)));
+        Iassign ((Ireg "rsi", 64), v); 
         Icall "printf" ] 
 
   | Return (e, _) -> let v = expr_to_iexpr e globales in
@@ -35,10 +35,7 @@ let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list
   | Var_affect (name, expr, _) -> 
       let v = expr_to_iexpr expr globales in
       if List.mem_assoc name globales then
-        [
-          Iassign ((Ireg "rax", 32), v);
-          Iassign ((Iglobal name, 32), Ivalue (Ileft (Ireg "rax", 32)));
-        ]
+          [Iassign ((Iglobal name, 64), v)]
       else
         failwith ("Variable non declaree: " ^ name)
 

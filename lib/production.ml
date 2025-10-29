@@ -59,9 +59,15 @@ let compile_ast (ast : iAST) : string =
 
   | Iassign ((pos, size), e) ->
       let expr_code = compile_expr e in
+      let pos_str = compile_pos pos in
+      expr_code ^
+      (match size with
+      | 32 -> Printf.sprintf "   pop %%eax\n   mov %%eax, %s\n" pos_str
+      | _ -> Printf.sprintf "   pop %%rax\n   mov %%rax, %s\n" pos_str)
+      (*
       (match size with
       | 32 -> expr_code ^ Printf.sprintf "    pop %s\n" (compile_pos pos)
-      | _ -> expr_code ^ Printf.sprintf "   pop %s\n" (compile_pos pos))
+      | _ -> expr_code ^ Printf.sprintf "   pop %s\n" (compile_pos pos))*)
 
   | Icall s ->
       Printf.sprintf "   xor %%eax, %%eax \n   call %s\n" s
@@ -76,11 +82,17 @@ let compile_asts (name : string) (asts : iAST list) : string =
 let compile_program (prog : iprogram) file =
   let oc = open_out file in
   let print oc s = output_string oc (s ^ "\n") in
-  let (cmd, _vars) = prog in
+  let (cmd, vars) = prog in
 
   print oc ".extern printf";
   print oc ".section .data";
   print oc "    fmt: .string \"%d\\n\"";
+
+   List.iter
+    (fun (name, _) ->
+      Printf.fprintf oc "    %s: .quad 0\n" name)
+    vars;
+
   print oc ".section .text";
   List.iter
     (fun (name, asts) -> print oc (compile_asts name asts))
