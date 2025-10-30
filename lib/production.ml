@@ -83,7 +83,7 @@ let compile_ast (ast : iAST) : string =
 
 
 let compile_asts (name : string) (asts : iAST list) : string =
-  let header = Printf.sprintf ".global %s \n %s:\n" name name in
+  let header = Printf.sprintf ".global %s \n %s:\n   and $-16, %%rsp\n" name name in
   let body = List.fold_left (fun acc ast -> acc ^ (compile_ast ast)) "" asts in
   header ^ body
 
