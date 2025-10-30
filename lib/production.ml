@@ -77,7 +77,7 @@ let compile_ast (ast : iAST) : string =
 
   | Icall s ->
       if !stack_parity = Odd then
-        Printf.sprintf "   push $0\n   call %s\n   pop %%rax\n" s
+        Printf.sprintf   "   sub $8, %rsp\n   call " ^ s ^ "\n   add $8, %rsp\n"
       else
       Printf.sprintf "   call %s\n" s
 
