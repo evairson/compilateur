@@ -9,16 +9,22 @@ let compile_pos (p : pos) : string =
 
 let compile_left_value (lv : left_value) : string =
   match lv with
-  | (pos, size) -> let compile_pos = compile_pos pos in
-      match size with
-      | 32 -> Printf.sprintf "   lea %s, %%eax\n   push %%eax\n" compile_pos
-      | _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" compile_pos
+  | (pos, size) -> let cp = compile_pos pos in
+      match pos with
+      | Ireg _ -> Printf.sprintf "   push %s\n" cp
+      | _ ->
+        match size with
+        | 32 -> Printf.sprintf "   mov %s, %%eax\n   push %%eax\n" cp
+        | _ -> Printf.sprintf "   mov %s, %%rax\n   push %%rax\n" cp
 
 let compile_ivalue (v : value) : string =
   match v with 
   | Iconst n -> 
       Printf.sprintf "   push $%d\n" n
-  | Ileft left -> compile_left_value left
+  | Ileft (pos, size) ->
+       match pos with
+       | Iglobal "fmt" ->Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
+       | _  -> compile_left_value (pos, size)
       
   
 let rec compile_expr (e : iexpr) : string =
@@ -38,13 +44,13 @@ let rec compile_expr (e : iexpr) : string =
       | Plus -> v1_code ^ v2_code ^
       "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
       | Minus ->  v1_code ^ v2_code ^
-        "    pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
+        "   pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
       | Mul ->  v1_code ^ v2_code ^
-        "    pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
+        "   pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
       | Div ->  v1_code ^ v2_code ^
-        "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
+        "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
       | Rem ->  v1_code ^ v2_code ^
-        "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
+        "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
       | _ -> failwith "Operation binaire pas encore implementee"
       end
 
