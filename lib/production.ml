@@ -1,5 +1,13 @@
 open AST2
 
+type parity = Even | Odd
+let stack_parity = ref Even
+
+let flip_parity () =
+  stack_parity := (match !stack_parity with
+    | Even -> Odd
+    | Odd -> Even)
+
 (*Tentative d'ajout*)
 let compile_pos (p : pos) : string =
   match p with
@@ -11,13 +19,14 @@ let compile_left_value (lv : left_value) : string =
   match lv with
   | (pos, size) -> let compile_pos = compile_pos pos in
       match size with
-      | 32 -> Printf.sprintf "   lea %s, %%eax\n   push %%eax\n" compile_pos
-      | _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" compile_pos
+      | 32 -> (flip_parity (); Printf.sprintf "   lea %s, %%eax\n   push %%eax\n" compile_pos)
+      | _ -> (flip_parity (); Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" compile_pos)
 
 let compile_ivalue (v : value) : string =
   match v with 
-  | Iconst n -> 
-      Printf.sprintf "   push $%d\n" n
+  | Iconst n -> (
+      flip_parity ();
+      Printf.sprintf "   push $%d\n" n)
   | Ileft left -> compile_left_value left
       
   
@@ -34,6 +43,7 @@ let rec compile_expr (e : iexpr) : string =
   | Ibinop (op, v1, v2) ->
       let v1_code = compile_expr v1 in
       let v2_code = compile_expr v2 in
+      flip_parity ();
       begin match op with
       | Plus -> v1_code ^ v2_code ^
       "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
@@ -52,6 +62,7 @@ let compile_ast (ast : iAST) : string =
   match ast with 
   | Ireturn e -> 
       (let expr_code = compile_expr e in
+      flip_parity ();
       expr_code ^ "   pop %rax\n   ret\n")
 
   | Ival e -> 
@@ -59,12 +70,16 @@ let compile_ast (ast : iAST) : string =
 
   | Iassign ((pos, size), e) ->
       let expr_code = compile_expr e in
+      flip_parity ();
       (match size with
       | 32 -> expr_code ^ Printf.sprintf "    pop %s\n" (compile_pos pos)
       | _ -> expr_code ^ Printf.sprintf "   pop %s\n" (compile_pos pos))
 
   | Icall s ->
-      Printf.sprintf "   xor %%eax, %%eax \n   call %s\n" s
+      if !stack_parity = Odd then
+        Printf.sprintf "   push $0\n   call %s\n   pop %%rax\n" s
+      else
+      Printf.sprintf "   call %s\n" s
 
 
 let compile_asts (name : string) (asts : iAST list) : string =
