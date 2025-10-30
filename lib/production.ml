@@ -17,17 +17,22 @@ let compile_pos (p : pos) : string =
 
 let compile_left_value (lv : left_value) : string =
   match lv with
-  | (pos, size) -> let compile_pos = compile_pos pos in
-      match size with
-      | 32 -> (flip_parity (); Printf.sprintf "   lea %s, %%eax\n   push %%eax\n" compile_pos)
-      | _ -> (flip_parity (); Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" compile_pos)
+  | (pos, size) -> let cp = compile_pos pos in
+      match pos with
+      | Ireg _ -> Printf.sprintf "   push %s\n" cp
+      | _ ->
+        match size with
+        | 32 -> Printf.sprintf "   mov %s, %%eax\n   push %%eax\n" cp
+        | _ -> Printf.sprintf "   mov %s, %%rax\n   push %%rax\n" cp
 
 let compile_ivalue (v : value) : string =
   match v with 
-  | Iconst n -> (
-      flip_parity ();
-      Printf.sprintf "   push $%d\n" n)
-  | Ileft left -> compile_left_value left
+  | Iconst n -> 
+      Printf.sprintf "   push $%d\n" n
+  | Ileft (pos, size) ->
+       match pos with
+       | Iglobal "fmt" ->Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
+       | _  -> compile_left_value (pos, size)
       
   
 let rec compile_expr (e : iexpr) : string =
@@ -48,13 +53,13 @@ let rec compile_expr (e : iexpr) : string =
       | Plus -> v1_code ^ v2_code ^
       "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
       | Minus ->  v1_code ^ v2_code ^
-        "    pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
+        "   pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
       | Mul ->  v1_code ^ v2_code ^
-        "    pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
+        "   pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
       | Div ->  v1_code ^ v2_code ^
-        "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
+        "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
       | Rem ->  v1_code ^ v2_code ^
-        "    pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
+        "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
       | _ -> failwith "Operation binaire pas encore implementee"
       end
 
@@ -70,16 +75,17 @@ let compile_ast (ast : iAST) : string =
 
   | Iassign ((pos, size), e) ->
       let expr_code = compile_expr e in
-      flip_parity ();
+      let pos_str = compile_pos pos in
+      expr_code ^
+      (match size with
+      | 32 -> Printf.sprintf "   pop %%eax\n   mov %%eax, %s\n" pos_str
+      | _ -> Printf.sprintf "   pop %%rax\n   mov %%rax, %s\n" pos_str)
+      (*
       (match size with
       | 32 -> expr_code ^ Printf.sprintf "    pop %s\n" (compile_pos pos)
-      | _ -> expr_code ^ Printf.sprintf "   pop %s\n" (compile_pos pos))
+      | _ -> expr_code ^ Printf.sprintf "   pop %s\n" (compile_pos pos))*)
 
   | Icall s ->
-      (*if !stack_parity = Odd then
-       "   xor %%rax, %%rax\n   sub $8, %rsp\n   call " ^ s ^ "\n   add $8, %rsp\n"
-      else
-      Printf.sprintf "   xor %%rax, %%rax\n     call %s\n" s*)
       Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n" s
 
 
@@ -94,11 +100,17 @@ let compile_asts (name : string) (asts : iAST list) : string =
 let compile_program (prog : iprogram) file =
   let oc = open_out file in
   let print oc s = output_string oc (s ^ "\n") in
-  let (cmd, _vars) = prog in
+  let (cmd, vars) = prog in
 
   print oc ".extern printf";
   print oc ".section .data";
   print oc "    fmt: .string \"%d\\n\"";
+
+   List.iter
+    (fun (name, _) ->
+      Printf.fprintf oc "    %s: .quad 0\n" name)
+    vars;
+
   print oc ".section .text";
   List.iter
     (fun (name, asts) -> print oc (compile_asts name asts))

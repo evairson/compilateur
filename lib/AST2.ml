@@ -1,8 +1,8 @@
 open AST1
 
-type iprogram = (string*iAST list) list * (string*int) list
+type iprogram = (string*iAST list) list * (string*int option) list
 
-and iAST = | Ireturn of iexpr | Ival of iexpr | Icall of string (*nom + nb arguments*)| Iassign of left_value * iexpr
+and iAST = | Ireturn of iexpr | Ival of iexpr | Icall of string | Iassign of left_value * iexpr
 
 and value = | Ileft of left_value | Iconst of int
 

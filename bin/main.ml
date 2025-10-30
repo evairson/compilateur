@@ -104,7 +104,10 @@ let () =
         body)
     functions;*)
   print_endline "Symboles ";
-  List.iter (fun (name, value) -> Printf.printf "%s -> %d\n" name value) symbols;
+  List.iter (fun (name, value) -> 
+    match value with 
+    | None -> Printf.printf "%s -> None\n" name
+    | Some value -> Printf.printf "%s -> %d\n" name value) symbols;
   compile_program iprog "output.s";
   print_endline "Compilation terminée, voir output.s";
   close_in ic
