@@ -21,8 +21,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    lea fmt(%rip), %rax
    push %rax
    pop %rax
@@ -31,8 +33,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    mov b(%rip), %rax
    push %rax
    pop %rax
@@ -59,8 +63,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    lea fmt(%rip), %rax
    push %rax
    pop %rax
@@ -69,8 +75,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    mov b(%rip), %rax
    push %rax
    pop %rax
@@ -97,8 +105,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    lea fmt(%rip), %rax
    push %rax
    pop %rax
@@ -107,8 +117,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    mov b(%rip), %rax
    push %rax
    pop %rax
@@ -135,8 +147,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    lea fmt(%rip), %rax
    push %rax
    pop %rax
@@ -145,8 +159,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    mov b(%rip), %rax
    push %rax
    pop %rax
@@ -173,8 +189,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    lea fmt(%rip), %rax
    push %rax
    pop %rax
@@ -183,8 +201,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    mov b(%rip), %rax
    push %rax
    pop %rax
@@ -211,8 +231,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    lea fmt(%rip), %rax
    push %rax
    pop %rax
@@ -221,24 +243,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
-   lea fmt(%rip), %rax
-   push %rax
-   pop %rax
-   mov %rax, %rdi
-   mov a(%rip), %rax
-   push %rax
-   mov b(%rip), %rax
-   push %rax
-   pop %rbx
-   pop %rax
-   add %rbx, %rax
-   push %rax
-   pop %rax
-   mov %rax, %rsi
-   xor %eax, %eax 
-   call printf
+   add $8, %rsp
    lea fmt(%rip), %rax
    push %rax
    pop %rax
@@ -251,16 +259,12 @@
    pop %rax
    add %rbx, %rax
    push %rax
-   mov b(%rip), %rax
-   push %rax
-   pop %rbx
-   pop %rax
-   add %rbx, %rax
-   push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    lea fmt(%rip), %rax
    push %rax
    pop %rax
@@ -279,6 +283,30 @@
    pop %rax
    add %rbx, %rax
    push %rax
+   pop %rax
+   mov %rax, %rsi
+   xor %rax, %rax
+   sub $8, %rsp
+   call printf
+   add $8, %rsp
+   lea fmt(%rip), %rax
+   push %rax
+   pop %rax
+   mov %rax, %rdi
+   mov a(%rip), %rax
+   push %rax
+   mov b(%rip), %rax
+   push %rax
+   pop %rbx
+   pop %rax
+   add %rbx, %rax
+   push %rax
+   mov b(%rip), %rax
+   push %rax
+   pop %rbx
+   pop %rax
+   add %rbx, %rax
+   push %rax
    mov a(%rip), %rax
    push %rax
    mov b(%rip), %rax
@@ -293,8 +321,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    lea fmt(%rip), %rax
    push %rax
    pop %rax
@@ -332,8 +362,10 @@
    push %rax
    pop %rax
    mov %rax, %rsi
-   xor %eax, %eax 
+   xor %rax, %rax
+   sub $8, %rsp
    call printf
+   add $8, %rsp
    push $0
    pop %rax
    ret
