@@ -18,6 +18,7 @@ type  stmt =
     | Lvar of string*ppos
     | Lvar_affect of string * expr * ppos
     | Var_affect of string * expr * ppos
+    | SCall of string * expr list * ppos * ppos
  (* 
     | While  of expr * seq * ppos * ppos  
     | If     of expr * seq * seq option* ppos * ppos  *)

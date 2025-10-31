@@ -11,8 +11,8 @@ let get_offset () : int =
 let reset_offset () : unit =
   counter := 0
 
-let reg_param_to_str (r : int) : string =
-  match r with
+let reg_param_to_str (i : int) : string =
+  match i with
   | 0 -> "rdi"
   | 1 -> "rsi"
   | 2 -> "rdx"
@@ -54,13 +54,18 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
       Iunop (op, v1)
 
   | Var (name, _) ->
-
-      if List.mem_assoc name globales then
+      if List.mem_assoc name !locals_env then
+        let pos = List.assoc name !locals_env in
+        Ivalue (Ileft pos)
+      
+      else if List.mem_assoc name globales then
         Ivalue (Ileft (Iglobal name, 64))
+      
       else
         failwith ("Variable non declaree: " ^ name)
-
-  | _ -> failwith " expression pas implemente"
+  
+  | Call (name, args, _, _) ->
+      Icall_expr (name, List.map (fun arg -> expr_to_iexpr arg globales) args)
 
   (*renvoie une liste de iAST*)
 let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
@@ -93,6 +98,18 @@ let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list
       locals_env := (name, pos) :: !locals_env;
       [ Iassign (pos, v) ]
 
+  | SCall (name, args, _, _) ->
+      let iasts =
+          List.mapi
+            (fun i arg ->
+              let v = expr_to_iexpr arg globales in
+              Iassign ((Ireg (reg_param_to_str i), 64), v)
+            )
+            args
+        in
+      iasts @ [
+        Icall name ]
+
 (*On doit passer une premiere fois pour recuperer les variables globales*)
 let recupere_globals (p : program) : (string *  int option ) list =
   List.fold_left (fun acc g ->
@@ -103,14 +120,23 @@ let recupere_globals (p : program) : (string *  int option ) list =
   ) [] p
 
 let recupere_locals (vars : string list) : iAST list =
-  let locals = List.mapi (fun _ var -> (var, (Ilocal (get_offset ()), 64))) vars in
+  let locals = List.map (fun var -> (var, (Ilocal (get_offset ()), 64))) vars in
   locals_env := locals @ !locals_env;
+  print_endline "coucou";
+  print_endline ("Locals env: " ^ (String.concat ", " (List.map (fun (n, (p, _)) ->
+    match p with
+    | Ilocal off -> Printf.sprintf "%s -> Ilocal(%d)" n off
+    | Iglobal s -> Printf.sprintf "%s -> Iglobal(%s)" n s
+    | Ireg r -> Printf.sprintf "%s -> Ireg(%s)" n r
+  ) locals)));
   let init_ast = List.map (fun (_, (pos, size)) -> Iassign ((pos, size) , Ivalue (Ileft(
     Ireg (get_reg_param ()), 64)))) locals in
   init_ast
 
 let program1_to_iprogram (p : program) : iprogram =
+  print_endline "Conversion en iAST...";
   let symboles = recupere_globals p in
+  print_endline "Conversion des fonctions...";
   let functions = List.fold_left (fun acc g ->
     match g with
     | Function (name, vars, stmts, _) ->

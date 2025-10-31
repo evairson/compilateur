@@ -8,6 +8,16 @@ let flip_parity () =
     | Even -> Odd
     | Odd -> Even)
 
+let reg_param_to_str (i : int) : string =
+  match i with
+  | 0 -> "rdi"
+  | 1 -> "rsi"
+  | 2 -> "rdx"
+  | 3 -> "rcx"
+  | 4 -> "r8"
+  | 5 -> "r9"
+  | _ -> failwith "Trop de parametres"
+
 (*Tentative d'ajout*)
 let compile_pos (p : pos) : string =
   match p with
@@ -63,11 +73,15 @@ let rec compile_expr (e : iexpr) : string =
       | _ -> failwith "Operation binaire pas encore implementee"
       end
 
+  | Icall_expr (name, args) ->
+      let args_code = List.fold_left (fun acc arg -> acc ^ (compile_expr arg)) "" args in
+      args_code ^
+      Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n   push %%rax\n" name
+
 let compile_ast (ast : iAST) : string =
   match ast with 
   | Ireturn e -> 
       (let expr_code = compile_expr e in
-      flip_parity ();
       expr_code ^ "   pop %rax\n   ret\n")
 
   | Ival e -> 
