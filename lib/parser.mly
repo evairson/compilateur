@@ -22,12 +22,12 @@
 
 /* priorites et associativites des tokens */
 
-%left PLUS MINUS 
-%left MUL DIV REM
-%left LT LE GT GE
-%left EQ NEQ EQS NEQS
 %left OR
 %left AND
+%left EQ NEQ EQS NEQS
+%left LT LE GT GE
+%left PLUS MINUS 
+%left MUL DIV REM
 
 %nonassoc NOT
 %nonassoc uminus
