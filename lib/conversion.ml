@@ -1,7 +1,7 @@
 open AST1
 open AST2
 
-let counter = ref 0
+let counter = ref 1
 
 let get_offset () : int =
   let c = !counter in
@@ -9,7 +9,7 @@ let get_offset () : int =
   c * (-8)
 
 let reset_offset () : unit =
-  counter := 0
+  counter := 1
 
 let reg_param_to_str (i : int) : string =
   match i with
@@ -71,8 +71,8 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
 let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
   match s with
   | Print (e, _) -> let v = expr_to_iexpr e globales in
-      [ Iassign ((Ireg "rdi", 64), Ivalue ( Ileft ((Iglobal "fmt"), 64)));
-        Iassign ((Ireg "rsi", 64), v); 
+      [ Iassign ((Ireg "rsi", 64), v); 
+        Iassign ((Ireg "rdi", 64), Ivalue ( Ileft ((Iglobal "fmt"), 64)));
         Icall "printf" ]
 
   | Return (e, _) -> let v = expr_to_iexpr e globales in
@@ -122,13 +122,6 @@ let recupere_globals (p : program) : (string *  int option ) list =
 let recupere_locals (vars : string list) : iAST list =
   let locals = List.map (fun var -> (var, (Ilocal (get_offset ()), 64))) vars in
   locals_env := locals @ !locals_env;
-  print_endline "coucou";
-  print_endline ("Locals env: " ^ (String.concat ", " (List.map (fun (n, (p, _)) ->
-    match p with
-    | Ilocal off -> Printf.sprintf "%s -> Ilocal(%d)" n off
-    | Iglobal s -> Printf.sprintf "%s -> Iglobal(%s)" n s
-    | Ireg r -> Printf.sprintf "%s -> Ireg(%s)" n r
-  ) locals)));
   let init_ast = List.map (fun (_, (pos, size)) -> Iassign ((pos, size) , Ivalue (Ileft(
     Ireg (get_reg_param ()), 64)))) locals in
   init_ast

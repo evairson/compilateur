@@ -1,13 +1,5 @@
 open AST2
 
-type parity = Even | Odd
-let stack_parity = ref Even
-
-let flip_parity () =
-  stack_parity := (match !stack_parity with
-    | Even -> Odd
-    | Odd -> Even)
-
 let reg_param_to_str (i : int) : string =
   match i with
   | 0 -> "rdi"
@@ -21,7 +13,7 @@ let reg_param_to_str (i : int) : string =
 (*Tentative d'ajout*)
 let compile_pos (p : pos) : string =
   match p with
-  | Ilocal i -> Printf.sprintf "-%d(%%rbp)" (8 * i)
+  | Ilocal i -> Printf.sprintf "%d(%%rbp)" (i)
   | Iglobal s -> Printf.sprintf "%s(%%rip)" s
   | Ireg s -> Printf.sprintf "%%%s" s
 
@@ -58,7 +50,6 @@ let rec compile_expr (e : iexpr) : string =
   | Ibinop (op, v1, v2) ->
       let v1_code = compile_expr v1 in
       let v2_code = compile_expr v2 in
-      flip_parity ();
       begin match op with
       | Plus -> v1_code ^ v2_code ^
       "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
@@ -91,7 +82,7 @@ let compile_ast (ast : iAST) : string =
   match ast with 
   | Ireturn e -> 
       (let expr_code = compile_expr e in
-      expr_code ^ "   pop %rax\n   ret\n")
+      expr_code ^ "  pop %rax\n    leave\n   ret\n")
 
   | Ival e -> 
       compile_expr e
@@ -109,13 +100,13 @@ let compile_ast (ast : iAST) : string =
       | _ -> expr_code ^ Printf.sprintf "   pop %s\n" (compile_pos pos))*)
 
   | Icall s ->
-      Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n" s
+       Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n" s
 
 
 
 let compile_asts (name : string) (asts : iAST list) : string =
   (*let header = Printf.sprintf ".global %s \n %s:\n   and $-16, %%rsp\n" name name in*)
-  let header = Printf.sprintf ".global %s \n %s:\n" name name in
+    let header = Printf.sprintf ".global %s \n %s:\n    push %%rbp\n     mov %%rsp, %%rbp\n    sub $64, %%rsp\n" name name in
   let body = List.fold_left (fun acc ast -> acc ^ (compile_ast ast)) "" asts in
   header ^ body
 
