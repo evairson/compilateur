@@ -74,7 +74,16 @@ let rec compile_expr (e : iexpr) : string =
       end
 
   | Icall_expr (name, args) ->
-      let args_code = List.fold_left (fun acc arg -> acc ^ (compile_expr arg)) "" args in
+      let args_code =
+        List.mapi
+          (fun i arg ->
+            let v_code = compile_expr arg in
+            let reg = reg_param_to_str i in
+            Printf.sprintf "%s   pop %%%s\n" v_code reg
+          )
+          args
+        |> String.concat ""
+      in
       args_code ^
       Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n   push %%rax\n" name
 
