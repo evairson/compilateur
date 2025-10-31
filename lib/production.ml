@@ -1,17 +1,19 @@
 open AST2
 
-type parity = Even | Odd
-let stack_parity = ref Even
-
-let flip_parity () =
-  stack_parity := (match !stack_parity with
-    | Even -> Odd
-    | Odd -> Even)
+let reg_param_to_str (i : int) : string =
+  match i with
+  | 0 -> "rdi"
+  | 1 -> "rsi"
+  | 2 -> "rdx"
+  | 3 -> "rcx"
+  | 4 -> "r8"
+  | 5 -> "r9"
+  | _ -> failwith "Trop de parametres"
 
 (*Tentative d'ajout*)
 let compile_pos (p : pos) : string =
   match p with
-  | Ilocal i -> Printf.sprintf "-%d(%%rbp)" (8 * i)
+  | Ilocal i -> Printf.sprintf "%d(%%rbp)" (i)
   | Iglobal s -> Printf.sprintf "%s(%%rip)" s
   | Ireg s -> Printf.sprintf "%%%s" s
 
@@ -43,12 +45,16 @@ let rec compile_expr (e : iexpr) : string =
       let v_code = compile_expr v in
       begin match op with
       | Opp -> v_code ^ "   pop %rax\n   neg %rax\n   push %rax\n"
-      | Not -> v_code ^ "   pop %rax\n   not %rax\n   push %rax\n"
+      | Not ->  v_code ^
+        "   pop %rax\n" ^
+        "   cmp $0, %rax\n" ^  
+        "   sete %al\n" ^  
+        "   movzbq %al, %rax\n" ^
+        "   push %rax\n"
       end
   | Ibinop (op, v1, v2) ->
       let v1_code = compile_expr v1 in
       let v2_code = compile_expr v2 in
-      flip_parity ();
       begin match op with
       | Plus -> v1_code ^ v2_code ^
       "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
@@ -60,15 +66,76 @@ let rec compile_expr (e : iexpr) : string =
         "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
       | Rem ->  v1_code ^ v2_code ^
         "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
-      | _ -> failwith "Operation binaire pas encore implementee"
+      | Eq ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
+      | Neq ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
+      | Lt ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setl %al\n   movzb %al, %rax\n   push %rax\n"
+      | Gt ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setg %al\n   movzb %al, %rax\n   push %rax\n"
+      | Le -> 
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setle %al\n   movzb %al, %rax\n   push %rax\n"
+      | Ge ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setge %al\n   movzb %al, %rax\n   push %rax\n"
+      | Eqs ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
+      | Neqs ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
+      | And ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n" ^
+          "   pop %rax\n" ^
+          "   cmp $0, %rax\n" ^
+          "   setne %al\n" ^
+          "   movzbq %al, %rax\n" ^
+          "   cmp $0, %rbx\n" ^
+          "   setne %bl\n" ^
+          "   and %bl, %al\n" ^
+          "   movzbq %al, %rax\n" ^
+          "   push %rax\n"
+
+      | Or ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n" ^
+          "   pop %rax\n" ^
+          "   cmp $0, %rax\n" ^
+          "   setne %al\n" ^
+          "   movzbq %al, %rax\n" ^
+          "   cmp $0, %rbx\n" ^
+          "   setne %bl\n" ^
+          "   or %bl, %al\n" ^
+          "   movzbq %al, %rax\n" ^
+          "   push %rax\n"
       end
+
+  | Icall_expr (name, args) ->
+      let args_code =
+        List.mapi
+          (fun i arg ->
+            let v_code = compile_expr arg in
+            let reg = reg_param_to_str i in
+            Printf.sprintf "%s   pop %%%s\n" v_code reg
+          )
+          args
+        |> String.concat ""
+      in
+      args_code ^
+      Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n   push %%rax\n" name
 
 let compile_ast (ast : iAST) : string =
   match ast with 
   | Ireturn e -> 
       (let expr_code = compile_expr e in
-      flip_parity ();
-      expr_code ^ "   pop %rax\n   ret\n")
+      expr_code ^ "  pop %rax\n    leave\n   ret\n")
 
   | Ival e -> 
       compile_expr e
@@ -86,13 +153,25 @@ let compile_ast (ast : iAST) : string =
       | _ -> expr_code ^ Printf.sprintf "   pop %s\n" (compile_pos pos))*)
 
   | Icall s ->
-      Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n" s
+       Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n" s
+
+  | Ilabel s ->
+      Printf.sprintf "%s:\n" s
+
+  | Icondjump (e, label) ->
+      let expr_code = compile_expr e in
+      expr_code ^
+      "   pop %rax\n   cmp $0, %rax\n" ^
+      Printf.sprintf "   je %s\n" label
+
+  | Ijump label ->
+      Printf.sprintf "   jmp %s\n" label 
 
 
 
 let compile_asts (name : string) (asts : iAST list) : string =
   (*let header = Printf.sprintf ".global %s \n %s:\n   and $-16, %%rsp\n" name name in*)
-  let header = Printf.sprintf ".global %s \n %s:\n" name name in
+    let header = Printf.sprintf ".global %s \n %s:\n    push %%rbp\n     mov %%rsp, %%rbp\n    sub $64, %%rsp\n" name name in
   let body = List.fold_left (fun acc ast -> acc ^ (compile_ast ast)) "" asts in
   header ^ body
 
@@ -113,6 +192,6 @@ let compile_program (prog : iprogram) file =
 
   print oc ".section .text";
   List.iter
-    (fun (name, asts) -> print oc (compile_asts name asts))
+    (fun (name, _, asts) -> print oc (compile_asts name asts))
     cmd;
   close_out oc

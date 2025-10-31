@@ -12,20 +12,26 @@ type expr =
   | Var of string * ppos
   | Call of string * expr list * ppos * ppos
 
+
+
 type  stmt =
     | Print of expr*ppos
     | Return of expr*ppos
     | Lvar of string*ppos
     | Lvar_affect of string * expr * ppos
     | Var_affect of string * expr * ppos
+    | SCall of string * expr list * ppos * ppos
+    | If of expr * seq * seq option * ppos * ppos (* expression, then, else, pos debut, pos fin *)
  (* 
     | While  of expr * seq * ppos * ppos  
     | If     of expr * seq * seq option* ppos * ppos  *)
 
 and seq = stmt list
 
+type params = string list
+
 type gdef =
-  | Function of string * string * seq * ppos
+  | Function of string * params * seq * ppos
   | Gvar of string * ppos
   | Gvar_affect of string * expr * ppos
 

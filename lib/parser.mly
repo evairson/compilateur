@@ -22,12 +22,12 @@
 
 /* priorites et associativites des tokens */
 
-%left PLUS MINUS 
-%left MUL DIV REM
-%left LT LE GT GE
-%left EQ NEQ EQS NEQS
 %left OR
 %left AND
+%left EQ NEQ EQS NEQS
+%left LT LE GT GE
+%left PLUS MINUS 
+%left MUL DIV REM
 
 %nonassoc NOT
 %nonassoc uminus
@@ -58,47 +58,49 @@ list_gdef :
   | lgdef = list_gdef g = gdef {lgdef @ [g]}
 ;
 
+params : 
+  | TINT id=IDENT { [id] }
+  | p=params COMMA TINT id=IDENT { p @ [id] }
+
 gdef:
   
-  |TINT id1=IDENT LP TINT id2=IDENT RP LB s = seq RB { Function (id1, id2, s, snd $loc) }
+  | TINT id1=IDENT LP RP LB s = seq RB { Function (id1, [], s, snd $loc) }
+  | TINT id1=IDENT LP p=params RP LB s = seq RB { Function (id1, p, s, snd $loc) }
   // |TINT id=IDENT LP RP LB s=seq RB { Function  (id,None,s,snd $loc) }
   // |TINT id1=IDENT LP TINT params=param_list RP LB s = seq RB { Function (id1, Some params, s, snd $loc) }
-  |TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
-  |TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
-  |id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
+  | TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
+  | TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
+  | id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
 ;
-
-// param_list :
-//   | TINT id=IDENT {[id]}
-//   | p=param_list COMMA TINT id=IDENT {p@[id]}
-// ;
 
 expr:
 | c = CST                        { Cst(c,snd $loc) }
 | e1 = expr o = op e2 = expr     { Binop (o, e1, e2, snd $loc) }
 | MINUS e = expr %prec uminus  { Unop(Opp, e, snd $loc) }
 | LP e=expr RP { e }
-// | NOT e = expr  { Unop(Not, e, snd $loc) }
+| NOT e = expr  { Unop(Not, e, snd $loc) }
 | i=IDENT { Var(i,snd $loc) } 
-// | id=IDENT LP RP {Call(id,[],fst $loc,snd $loc)}
-// | id=IDENT LP args=arg_list RP {Call(id,args,fst $loc, snd $loc)}
+| id=IDENT LP RP {Call(id,[],fst $loc,snd $loc)}
+| id=IDENT LP args=arg_list RP {Call(id,args,fst $loc, snd $loc)}
 
 ;
 
-// arg_list:
-//   |e=expr {[e]}
-//   |l=arg_list COMMA e=expr {l@[e]}
+arg_list:
+  |e=expr {[e]}
+  |l=arg_list COMMA e=expr {l@[e]}
 
 // ;
 
 stmt:
 | PRINT LP e = expr RP SEMI { Print(e,snd $loc) }
 | RETURN e = expr SEMI { Return(e,snd $loc) }
-// | TINT id=IDENT SEMI { Lvar(id, snd $loc) }
-// | TINT id=IDENT AFFECT e=expr SEMI { Lvar_affect(id, e, snd $loc) }
+| TINT id=IDENT SEMI { Lvar(id, snd $loc) }
+| TINT id=IDENT AFFECT e=expr SEMI { Lvar_affect(id, e, snd $loc) }
 | id=IDENT AFFECT e=expr SEMI { Var_affect(id, e, snd $loc) }
-// | IF LP e = expr RP LB s=seq RB { If(e,s,None,fst $loc, snd $loc)}
-// | IF LP e = expr RP LB s1=seq RB ELSE LB s2=seq RB { If(e,s1,Some s2,fst $loc, snd $loc)}
+| id=IDENT LP RP SEMI {SCall(id,[],fst $loc,snd $loc)}
+| id=IDENT LP args=arg_list RP SEMI {SCall(id,args,fst $loc, snd $loc)}
+| IF LP e = expr RP LB s=seq RB { If(e,s,None,fst $loc, snd $loc)}
+| IF LP e = expr RP LB s1=seq RB ELSE LB s2=seq RB { If(e,s1,Some s2,fst $loc, snd $loc)}
 // | WHILE LP e=expr RP LB s=seq RB {While(e,s,fst $loc,snd $loc)}
 
 ; 
