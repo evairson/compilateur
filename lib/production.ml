@@ -61,7 +61,36 @@ let rec compile_expr (e : iexpr) : string =
         "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
       | Rem ->  v1_code ^ v2_code ^
         "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
-      | _ -> failwith "Operation binaire pas encore implementee"
+      | Eq ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
+      | Neq ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
+      | Lt ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setl %al\n   movzb %al, %rax\n   push %rax\n"
+      | Gt ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setg %al\n   movzb %al, %rax\n   push %rax\n"
+      | Le -> 
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setle %al\n   movzb %al, %rax\n   push %rax\n"
+      | Ge ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setge %al\n   movzb %al, %rax\n   push %rax\n"
+      | Eqs ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
+      | Neqs ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
+      | And ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   and %rbx, %rax\n   push %rax\n"
+      | Or ->
+          v1_code ^ v2_code ^
+          "   pop %rbx\n   pop %rax\n   or %rbx, %rax\n   push %rax\n"
       end
 
   | Icall_expr (name, args) ->
