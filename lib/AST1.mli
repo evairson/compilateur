@@ -22,10 +22,12 @@ type  stmt =
     | While  of expr * seq * ppos * ppos  
     | If     of expr * seq * seq option* ppos * ppos  *)
 
-and seq = stmt list
+type seq = stmt list
+
+type params = string list
 
 type gdef =
-  | Function of string * string * seq * ppos
+  | Function of string * params * seq * ppos
   | Gvar of string * ppos
   | Gvar_affect of string * expr * ppos
 

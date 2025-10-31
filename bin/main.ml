@@ -10,7 +10,7 @@ let prog1 : program =
   [
     Function (
       "main",             
-      "x",                  
+      [],                  
       [ Print (Cst (4, dummy_pos), dummy_pos);
       Return (Cst (0, dummy_pos), dummy_pos)
       ],  

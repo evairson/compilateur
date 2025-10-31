@@ -58,9 +58,13 @@ list_gdef :
   | lgdef = list_gdef g = gdef {lgdef @ [g]}
 ;
 
+params : 
+  | TINT id=IDENT { [id] }
+  | p=params COMMA id=IDENT { p @ [id] }
+
 gdef:
   
-  |TINT id1=IDENT LP TINT id2=IDENT RP LB s = seq RB { Function (id1, id2, s, snd $loc) }
+  |TINT id1=IDENT LP p=params RP LB s = seq RB { Function (id1, p, s, snd $loc) }
   // |TINT id=IDENT LP RP LB s=seq RB { Function  (id,None,s,snd $loc) }
   // |TINT id1=IDENT LP TINT params=param_list RP LB s = seq RB { Function (id1, Some params, s, snd $loc) }
   |TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
@@ -94,8 +98,8 @@ expr:
 stmt:
 | PRINT LP e = expr RP SEMI { Print(e,snd $loc) }
 | RETURN e = expr SEMI { Return(e,snd $loc) }
-// | TINT id=IDENT SEMI { Lvar(id, snd $loc) }
-// | TINT id=IDENT AFFECT e=expr SEMI { Lvar_affect(id, e, snd $loc) }
+| TINT id=IDENT SEMI { Lvar(id, snd $loc) }
+| TINT id=IDENT AFFECT e=expr SEMI { Lvar_affect(id, e, snd $loc) }
 | id=IDENT AFFECT e=expr SEMI { Var_affect(id, e, snd $loc) }
 // | IF LP e = expr RP LB s=seq RB { If(e,s,None,fst $loc, snd $loc)}
 // | IF LP e = expr RP LB s1=seq RB ELSE LB s2=seq RB { If(e,s1,Some s2,fst $loc, snd $loc)}

@@ -113,6 +113,6 @@ let compile_program (prog : iprogram) file =
 
   print oc ".section .text";
   List.iter
-    (fun (name, asts) -> print oc (compile_asts name asts))
+    (fun (name, _, asts) -> print oc (compile_asts name asts))
     cmd;
   close_out oc

@@ -1,6 +1,34 @@
 open AST1
 open AST2
 
+let counter = ref 0
+
+let get_offset () : int =
+  let c = !counter in
+  counter := c + 1;
+  c * 8
+
+let reg_param_to_str (r : int) : string =
+  match r with
+  | 0 -> "rdi"
+  | 1 -> "rsi"
+  | 2 -> "rdx"
+  | 3 -> "rcx"
+  | 4 -> "r8"
+  | 5 -> "r9"
+  | _ -> failwith "Trop de parametres"
+
+let reg_params = ref 0
+
+let get_reg_param () : string =
+  let r = reg_param_to_str (!reg_params) in
+  reg_params := !reg_params + 1;
+  r
+
+let reset_reg_params () : unit =
+  reg_params := 0
+
+
 let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexpr = 
    match e with
   | Cst (n, _) -> Ivalue (Iconst n)
@@ -38,6 +66,8 @@ let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list
           [Iassign ((Iglobal name, 64), v)]
       else
         failwith ("Variable non declaree: " ^ name)
+  
+  | Lvar (_, _) -> [ Iassign ((Ilocal (get_offset ()), 64), Ivalue (Iconst 0)) ]
 
   | _ -> failwith "stmt non géré"
 
@@ -50,14 +80,21 @@ let recupere_globals (p : program) : (string *  int option ) list =
     | _ -> acc
   ) [] p
 
+let recupere_locals (vars : string list) : (locals * iAST list) =
+  let locals = List.mapi (fun _ var -> (var, (Ilocal (get_offset ()), 64))) vars in
+  let init_ast = List.map (fun (_, (pos, size)) -> Iassign ((pos, size) , Ivalue (Ileft(
+    Ireg (get_reg_param ()), 64)))) locals in
+  (locals, init_ast)
+
 let program1_to_iprogram (p : program) : iprogram =
   let symboles = recupere_globals p in
   let functions = List.fold_left (fun acc g ->
     match g with
-    | Function (name, _, stmts, _) ->
+    | Function (name, vars, stmts, _) ->
+        let (symboles_locaux, init_ast) = recupere_locals vars in
         let body = List.flatten (List.map (fun s -> stmt_to_iAST s symboles) stmts) in
  (*on garde les globales pour recuperer les valeurs dans la suite*)
-        (name, body) :: acc;
+        (name, symboles_locaux, init_ast @ body) :: acc;
     | _ -> acc
   ) [] p in
   (List.rev functions, List.rev symboles)
