@@ -102,6 +102,18 @@ let compile_ast (ast : iAST) : string =
   | Icall s ->
        Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n" s
 
+  | Ilabel s ->
+      Printf.sprintf "%s:\n" s
+
+  | Icondjump (e, label) ->
+      let expr_code = compile_expr e in
+      expr_code ^
+      "   pop %rax\n   cmp $0, %rax\n" ^
+      Printf.sprintf "   je %s\n" label
+
+  | Ijump label ->
+      Printf.sprintf "   jmp %s\n" label 
+
 
 
 let compile_asts (name : string) (asts : iAST list) : string =

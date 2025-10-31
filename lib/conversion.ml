@@ -40,6 +40,13 @@ let find_local name =
 let reset_locals_env () : unit =
   locals_env := []
 
+let jump_number = ref 0
+
+let get_jump_number () : int =
+  let j = !jump_number in
+  jump_number := j + 1;
+  j
+
 
 let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexpr = 
    match e with
@@ -68,7 +75,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
       Icall_expr (name, List.map (fun arg -> expr_to_iexpr arg globales) args)
 
   (*renvoie une liste de iAST*)
-let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
+let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
   match s with
   | Print (e, _) -> let v = expr_to_iexpr e globales in
       [ Iassign ((Ireg "rsi", 64), v); 
@@ -109,6 +116,26 @@ let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list
         in
       iasts @ [
         Icall name ]
+
+  | If (cond, then_branch, else_branch, _, _) ->
+      let cond_iexpr = expr_to_iexpr cond globales in
+      let then_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales) then_branch) in
+      let else_iasts = match else_branch with
+        | Some stmts -> List.flatten (List.map (fun s -> stmt_to_iAST s globales) stmts)
+        | None -> []
+      in
+      let jump = get_jump_number () in
+      let else_label = "else_" ^ string_of_int (jump) in
+      let end_label = "end_if_" ^ string_of_int (jump) in
+      let iasts = [
+        Icondjump (cond_iexpr, else_label)
+      ] @ then_iasts @ [
+        Ijump end_label;
+        Ilabel else_label
+      ] @ else_iasts @ [
+        Ilabel end_label
+      ] in
+      iasts
 
 (*On doit passer une premiere fois pour recuperer les variables globales*)
 let recupere_globals (p : program) : (string *  int option ) list =

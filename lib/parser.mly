@@ -99,8 +99,8 @@ stmt:
 | id=IDENT AFFECT e=expr SEMI { Var_affect(id, e, snd $loc) }
 | id=IDENT LP RP SEMI {SCall(id,[],fst $loc,snd $loc)}
 | id=IDENT LP args=arg_list RP SEMI {SCall(id,args,fst $loc, snd $loc)}
-// | IF LP e = expr RP LB s=seq RB { If(e,s,None,fst $loc, snd $loc)}
-// | IF LP e = expr RP LB s1=seq RB ELSE LB s2=seq RB { If(e,s1,Some s2,fst $loc, snd $loc)}
+| IF LP e = expr RP LB s=seq RB { If(e,s,None,fst $loc, snd $loc)}
+| IF LP e = expr RP LB s1=seq RB ELSE LB s2=seq RB { If(e,s1,Some s2,fst $loc, snd $loc)}
 // | WHILE LP e=expr RP LB s=seq RB {While(e,s,fst $loc,snd $loc)}
 
 ; 

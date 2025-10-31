@@ -4,7 +4,13 @@ type iprogram = (string* locals * iAST list) list * (string*int option) list
 
 and locals = (string * left_value) list
 
-and iAST = | Ireturn of iexpr | Ival of iexpr | Icall of string | Iassign of left_value * iexpr
+and iAST = | Ireturn of iexpr
+           | Ival of iexpr
+           | Icall of string
+           | Iassign of left_value * iexpr
+           | Ilabel of string
+           | Icondjump of iexpr * string
+           | Ijump of string
 
 and value = | Ileft of left_value | Iconst of int
 
