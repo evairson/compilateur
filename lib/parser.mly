@@ -78,7 +78,7 @@ expr:
 | e1 = expr o = op e2 = expr     { Binop (o, e1, e2, snd $loc) }
 | MINUS e = expr %prec uminus  { Unop(Opp, e, snd $loc) }
 | LP e=expr RP { e }
-// | NOT e = expr  { Unop(Not, e, snd $loc) }
+| NOT e = expr  { Unop(Not, e, snd $loc) }
 | i=IDENT { Var(i,snd $loc) } 
 | id=IDENT LP RP {Call(id,[],fst $loc,snd $loc)}
 | id=IDENT LP args=arg_list RP {Call(id,args,fst $loc, snd $loc)}

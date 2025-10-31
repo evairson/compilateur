@@ -45,7 +45,12 @@ let rec compile_expr (e : iexpr) : string =
       let v_code = compile_expr v in
       begin match op with
       | Opp -> v_code ^ "   pop %rax\n   neg %rax\n   push %rax\n"
-      | Not -> v_code ^ "   pop %rax\n   not %rax\n   push %rax\n"
+      | Not ->  v_code ^
+        "   pop %rax\n" ^
+        "   cmp $0, %rax\n" ^  
+        "   sete %al\n" ^  
+        "   movzbq %al, %rax\n" ^
+        "   push %rax\n"
       end
   | Ibinop (op, v1, v2) ->
       let v1_code = compile_expr v1 in
@@ -87,10 +92,29 @@ let rec compile_expr (e : iexpr) : string =
           "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
       | And ->
           v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   and %rbx, %rax\n   push %rax\n"
+          "   pop %rbx\n" ^
+          "   pop %rax\n" ^
+          "   cmp $0, %rax\n" ^
+          "   setne %al\n" ^
+          "   movzbq %al, %rax\n" ^
+          "   cmp $0, %rbx\n" ^
+          "   setne %bl\n" ^
+          "   and %bl, %al\n" ^
+          "   movzbq %al, %rax\n" ^
+          "   push %rax\n"
+
       | Or ->
           v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   or %rbx, %rax\n   push %rax\n"
+          "   pop %rbx\n" ^
+          "   pop %rax\n" ^
+          "   cmp $0, %rax\n" ^
+          "   setne %al\n" ^
+          "   movzbq %al, %rax\n" ^
+          "   cmp $0, %rbx\n" ^
+          "   setne %bl\n" ^
+          "   or %bl, %al\n" ^
+          "   movzbq %al, %rax\n" ^
+          "   push %rax\n"
       end
 
   | Icall_expr (name, args) ->
