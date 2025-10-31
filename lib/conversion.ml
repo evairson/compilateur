@@ -6,7 +6,10 @@ let counter = ref 0
 let get_offset () : int =
   let c = !counter in
   counter := c + 1;
-  c * 8
+  c * (-8)
+
+let reset_offset () : unit =
+  counter := 0
 
 let reg_param_to_str (r : int) : string =
   match r with
@@ -28,6 +31,15 @@ let get_reg_param () : string =
 let reset_reg_params () : unit =
   reg_params := 0
 
+let locals_env : (string * left_value) list ref = ref []
+
+let find_local name =
+  try Some (List.assoc name !locals_env)
+  with Not_found -> None
+
+let reset_locals_env () : unit =
+  locals_env := []
+
 
 let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexpr = 
    match e with
@@ -42,6 +54,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
       Iunop (op, v1)
 
   | Var (name, _) ->
+
       if List.mem_assoc name globales then
         Ivalue (Ileft (Iglobal name, 64))
       else
@@ -50,26 +63,35 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
   | _ -> failwith " expression pas implemente"
 
   (*renvoie une liste de iAST*)
-let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list=
+let stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
   match s with
   | Print (e, _) -> let v = expr_to_iexpr e globales in
       [ Iassign ((Ireg "rdi", 64), Ivalue ( Ileft ((Iglobal "fmt"), 64)));
         Iassign ((Ireg "rsi", 64), v); 
-        Icall "printf" ] 
+        Icall "printf" ]
 
   | Return (e, _) -> let v = expr_to_iexpr e globales in
       [ Ireturn (v) ]
   
   | Var_affect (name, expr, _) -> 
       let v = expr_to_iexpr expr globales in
-      if List.mem_assoc name globales then
+      if List.mem_assoc name !locals_env then
+        let pos = List.assoc name !locals_env in
+        [ Iassign (pos, v) ]
+      else
+      (if List.mem_assoc name globales then
           [Iassign ((Iglobal name, 64), v)]
       else
-        failwith ("Variable non declaree: " ^ name)
+        failwith ("Variable non declaree: " ^ name))
   
-  | Lvar (_, _) -> [ Iassign ((Ilocal (get_offset ()), 64), Ivalue (Iconst 0)) ]
+  | Lvar (name, _) -> let pos = (Ilocal (get_offset ()), 64) in
+      locals_env := (name, pos) :: !locals_env;
+      [ Iassign (pos, Ivalue (Iconst 0)) ]
 
-  | _ -> failwith "stmt non géré"
+  | Lvar_affect (name, expr, _) -> let v = expr_to_iexpr expr globales in
+      let pos = (Ilocal (get_offset ()), 64) in
+      locals_env := (name, pos) :: !locals_env;
+      [ Iassign (pos, v) ]
 
 (*On doit passer une premiere fois pour recuperer les variables globales*)
 let recupere_globals (p : program) : (string *  int option ) list =
@@ -80,21 +102,25 @@ let recupere_globals (p : program) : (string *  int option ) list =
     | _ -> acc
   ) [] p
 
-let recupere_locals (vars : string list) : (locals * iAST list) =
+let recupere_locals (vars : string list) : iAST list =
   let locals = List.mapi (fun _ var -> (var, (Ilocal (get_offset ()), 64))) vars in
+  locals_env := locals @ !locals_env;
   let init_ast = List.map (fun (_, (pos, size)) -> Iassign ((pos, size) , Ivalue (Ileft(
     Ireg (get_reg_param ()), 64)))) locals in
-  (locals, init_ast)
+  init_ast
 
 let program1_to_iprogram (p : program) : iprogram =
   let symboles = recupere_globals p in
   let functions = List.fold_left (fun acc g ->
     match g with
     | Function (name, vars, stmts, _) ->
-        let (symboles_locaux, init_ast) = recupere_locals vars in
+        (reset_reg_params ();
+        reset_locals_env ();
+        reset_offset ();
+        let init_ast = recupere_locals vars in
         let body = List.flatten (List.map (fun s -> stmt_to_iAST s symboles) stmts) in
  (*on garde les globales pour recuperer les valeurs dans la suite*)
-        (name, symboles_locaux, init_ast @ body) :: acc;
+        (name, !locals_env, init_ast @ body) :: acc)
     | _ -> acc
   ) [] p in
   (List.rev functions, List.rev symboles)
