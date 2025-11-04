@@ -123,7 +123,7 @@ let rec compile_expr (e : iexpr) : string =
       "   push %rax\n"
 
   | Iprint ->
-      "   xor %rax, %rax\n   call printf\n   push %rax\n"
+      "   and $-16, %rsp \n    xor %rax, %rax\n   call printf\n   push %rax\n"
 
 let compile_ast (ast : iAST) : string =
   match ast with 
