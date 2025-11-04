@@ -27,8 +27,9 @@ rule token = parse
   | ')'     { RP }
   | '{'     { BEGIN }
   | '}'     { END }
-  | '['     { LB }
-  | ']'     { RB }
+  | '['      { LB }
+  | ']'      { RB }
+
 
   | "print_int" { PRINT }
 
