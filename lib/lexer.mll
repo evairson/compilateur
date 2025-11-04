@@ -16,7 +16,7 @@ rule token = parse
   | '%'     { REM }
   | '+'     { PLUS }
   | '-'     { MINUS }
-  | '*'     { MUL }
+  | '*'     { STAR }
   | '/'     { DIV }
   | "=="    { EQ }
   | '='     { AFFECT }
@@ -25,8 +25,10 @@ rule token = parse
   | ';'     { SEMI }
   | '('     { LP }
   | ')'     { RP }
-  | '{'     { LB }
-  | '}'     { RB }
+  | '{'     { BEGIN }
+  | '}'     { END }
+  | '['      { LB }
+  | ']'      { RB }
 
   | "print_int" { PRINT }
 

@@ -6,9 +6,10 @@
 
 %token <int> CST
 %token <string> IDENT
-%token EOF 
+%token EOF
 %token LP RP LB RB SEMI COMMA TINT
-%token PLUS MINUS MUL DIV REM
+%token BEGIN END
+%token PLUS MINUS DIV REM
 
 %token PRINT
 %token AFFECT
@@ -17,7 +18,9 @@
 
 %token AND OR NOT
 
-%token IF ELSE WHILE RETURN
+%token IF ELSE WHILE RETURN BREAK CONTINUE
+
+%token STAR
 
 
 /* priorites et associativites des tokens */
@@ -26,8 +29,8 @@
 %left AND
 %left EQ NEQ EQS NEQS
 %left LT LE GT GE
-%left PLUS MINUS 
-%left MUL DIV REM
+%left PLUS MINUS
+%left STAR DIV REM
 
 %nonassoc NOT
 %nonassoc uminus
@@ -58,19 +61,22 @@ list_gdef :
   | lgdef = list_gdef g = gdef {lgdef @ [g]}
 ;
 
-params : 
+params :
   | TINT id=IDENT { [id] }
   | p=params COMMA TINT id=IDENT { p @ [id] }
 
 gdef:
   
-  | TINT id1=IDENT LP RP LB s = seq RB { Function (id1, [], s, snd $loc) }
-  | TINT id1=IDENT LP p=params RP LB s = seq RB { Function (id1, p, s, snd $loc) }
-  // |TINT id=IDENT LP RP LB s=seq RB { Function  (id,None,s,snd $loc) }
+  | TINT id1=IDENT LP RP BEGIN s = seq END { Function (id1, [], s, snd $loc) }
+  | TINT id1=IDENT LP p=params RP BEGIN s = seq END { Function (id1, p, s, snd $loc) }
+  // |TINT id=IDENT LP RP BEGIN s=seq END { Function  (id,None,s,snd $loc) }
   // |TINT id1=IDENT LP TINT params=param_list RP LB s = seq RB { Function (id1, Some params, s, snd $loc) }
   | TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
   | TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
   | id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
+
+  // | TINT id=IDENT LB e=expr RB SEMI { Garray(id, e, snd $loc) }
+
 ;
 
 expr:
@@ -79,9 +85,18 @@ expr:
 | MINUS e = expr %prec uminus  { Unop(Opp, e, snd $loc) }
 | LP e=expr RP { e }
 | NOT e = expr  { Unop(Not, e, snd $loc) }
-| i=IDENT { Var(i,snd $loc) } 
+| i=IDENT { Var(i,snd $loc) }
 | id=IDENT LP RP {Call(id,[],fst $loc,snd $loc)}
 | id=IDENT LP args=arg_list RP {Call(id,args,fst $loc, snd $loc)}
+
+| STAR e=expr { Unop(Pointeur,e,snd $loc) }  
+
+
+// | LB args=arg_list RB { Array(args,snd $loc) }
+// | id=IDENT LB e=expr RB { Array_get (id, e, snd $loc) }
+
+
+
 
 ;
 
@@ -96,14 +111,26 @@ stmt:
 | RETURN e = expr SEMI { Return(e,snd $loc) }
 | TINT id=IDENT SEMI { Lvar(id, snd $loc) }
 | TINT id=IDENT AFFECT e=expr SEMI { Lvar_affect(id, e, snd $loc) }
-| id=IDENT AFFECT e=expr SEMI { Var_affect(id, e, snd $loc) }
+| id=IDENT AFFECT e=expr SEMI {Var_affect(id, e, snd $loc)}
 | id=IDENT LP RP SEMI {SCall(id,[],fst $loc,snd $loc)}
 | id=IDENT LP args=arg_list RP SEMI {SCall(id,args,fst $loc, snd $loc)}
 | IF LP e = expr RP LB s=seq RB { If(e,s,None,fst $loc, snd $loc)}
 | IF LP e = expr RP LB s1=seq RB ELSE LB s2=seq RB { If(e,s1,Some s2,fst $loc, snd $loc)}
+
+
+
+
 // | WHILE LP e=expr RP LB s=seq RB {While(e,s,fst $loc,snd $loc)}
 
-; 
+
+// | BREAK SEMI {Break(snd $loc)}
+// | CONTINUE SEMI {Continue(snd $loc)}
+// | TINT STAR id=IDENT SEMI { Lvar_p(id, snd $loc) }
+// | STAR id=IDENT AFFECT e=expr SEMI {Var_affect_p(id, e, snd $loc)}
+// | TINT STAR id=IDENT AFFECT e=expr SEMI { Lvar_affect_p(id, e, snd $loc) }
+// | id=IDENT LB e1=expr RB AFFECT e2=expr SEMI { Array_affect(id, e1, e2, snd $loc) }
+
+;
 
 seq:
 | s=stmt { [s] }
@@ -114,7 +141,7 @@ seq:
 %inline op:
 | PLUS  { Plus }
 | MINUS { Minus }
-| MUL   { Mul }
+| STAR   { Mul }
 | DIV   { Div }
 | REM   { Rem }
 | LT { Lt }
@@ -127,5 +154,5 @@ seq:
 | OR   { Or }
 | EQS   { Eqs }
 | NEQS   { Neqs }
-;
 
+;
