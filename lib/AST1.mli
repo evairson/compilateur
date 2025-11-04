@@ -47,4 +47,8 @@ type gdef =
   | Gvar_affect of string * expr * ppos
   | Garray of string * expr * ppos
 
+    (* | Garray of string * expr list * ppos *)
+
+
+
 type program = gdef list

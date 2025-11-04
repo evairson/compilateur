@@ -1,5 +1,15 @@
 open AST2
 
+let reg_param_to_str (i : int) : string =
+  match i with
+  | 0 -> "rdi"
+  | 1 -> "rsi"
+  | 2 -> "rdx"
+  | 3 -> "rcx"
+  | 4 -> "r8"
+  | 5 -> "r9"
+  | _ -> failwith "Trop de parametres"
+
 (*Tentative d'ajout*)
 let compile_pos (p : pos) : string =
   match p with
@@ -108,23 +118,19 @@ let rec compile_expr (e : iexpr) : string =
           "   push %rax\n"
       end
 
-  | Icall (name, args) ->
+  | Icall_expr (name, args) ->
       let args_code =
-        List.rev_map (fun arg ->
-          let v_code = compile_expr arg in
-          v_code
-        ) args
+        List.mapi
+          (fun i arg ->
+            let v_code = compile_expr arg in
+            let reg = reg_param_to_str i in
+            Printf.sprintf "%s   pop %%%s\n" v_code reg
+          )
+          args
         |> String.concat ""
       in
-
-      let cleanup = Printf.sprintf "   add $%d, %%rsp\n" (8 * List.length args) in
       args_code ^
-      Printf.sprintf "   call %s\n" name ^
-      cleanup ^
-      "   push %rax\n"
-
-  | Iprint ->
-      "   and $-16, %rsp \n    xor %rax, %rax\n   call printf\n   push %rax\n"
+      Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n   push %%rax\n" name
 
 let compile_ast (ast : iAST) : string =
   match ast with 
@@ -142,6 +148,13 @@ let compile_ast (ast : iAST) : string =
       (match size with
       | 32 -> Printf.sprintf "   pop %%eax\n   mov %%eax, %s\n" pos_str
       | _ -> Printf.sprintf "   pop %%rax\n   mov %%rax, %s\n" pos_str)
+      (*
+      (match size with
+      | 32 -> expr_code ^ Printf.sprintf "    pop %s\n" (compile_pos pos)
+      | _ -> expr_code ^ Printf.sprintf "   pop %s\n" (compile_pos pos))*)
+
+  | Icall s ->
+       Printf.sprintf "   xor %%rax, %%rax\n   sub $8, %%rsp\n   call %s\n   add $8, %%rsp\n" s
 
   | Ilabel s ->
       Printf.sprintf "%s:\n" s
@@ -180,6 +193,6 @@ let compile_program (prog : iprogram) file =
 
   print oc ".section .text";
   List.iter
-    (fun (name, asts) -> print oc (compile_asts name asts))
+    (fun (name, _, asts) -> print oc (compile_asts name asts))
     cmd;
   close_out oc
