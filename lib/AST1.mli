@@ -12,11 +12,7 @@ type expr =
   | Call of string * expr list * ppos * ppos
   | Address of string * ppos
   | Deref of expr * ppos
-
-
-  (* | Array of expr list * ppos
-  | Array_get of string * expr * ppos *)
-
+  | Array_get of string * expr * ppos
 
 
 type  stmt =
@@ -28,6 +24,7 @@ type  stmt =
     | Pvar_affect of expr * expr * ppos
     | SCall of string * expr list * ppos * ppos
     | If of expr * seq * seq option * ppos * ppos (* expression, then, else, pos debut, pos fin *)
+    | Array_affect of string * expr * expr * ppos
     | While  of expr * seq * ppos * ppos
     | Break of ppos
     | Continue of ppos
@@ -35,7 +32,7 @@ type  stmt =
     | Lvar_p of string*ppos
     | Lvar_affect_p of string * expr * ppos
     | Var_affect_p of string * expr * ppos 
-    | Array_affect of string * expr * expr * ppos *)
+     *)
      
 
 and seq = stmt list
@@ -47,9 +44,5 @@ type gdef =
   | Gvar of string * ppos
   | Gvar_affect of string * expr * ppos
   | Garray of string * expr * ppos
-
-    (* | Garray of string * expr list * ppos *)
-
-
 
 type program = gdef list

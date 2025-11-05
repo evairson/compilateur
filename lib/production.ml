@@ -8,6 +8,7 @@ let compile_pos (p : pos) : string =
   | Ireg s -> Printf.sprintf "%%%s" s
   | Ideref _ -> failwith "Cannot compile Ideref position directly"
   | IAddr i -> Printf.sprintf "%d(%%rbp)" (i)
+  | GAddr s -> Printf.sprintf "%s(%%rip)" s
 
   
 let rec compile_expr (e : iexpr) : string =
@@ -135,6 +136,7 @@ and  compile_ivalue (v : value) : string =
        match pos with
        | Iglobal "fmt" ->Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
        | IAddr _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
+       | GAddr _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
        | _  -> compile_left_value (pos, size)
       
 
@@ -196,10 +198,12 @@ let compile_program (prog : iprogram) file =
   print oc ".section .data";
   print oc "    fmt: .string \"%d\\n\"";
 
-   List.iter
-    (fun (name, _) ->
-      Printf.fprintf oc "    %s: .quad 0\n" name)
-    vars;
+  List.iter
+    (fun (name, size_opt) ->
+      match size_opt with
+      | Some n -> Printf.fprintf oc "    %s: .space %d\n" name (n * 8)
+      | None -> Printf.fprintf oc "    %s: .quad 0\n" name)
+  vars;
 
   print oc ".section .text";
   List.iter
