@@ -6,26 +6,9 @@ let compile_pos (p : pos) : string =
   | Ilocal i -> Printf.sprintf "%d(%%rbp)" (i)
   | Iglobal s -> Printf.sprintf "%s(%%rip)" s
   | Ireg s -> Printf.sprintf "%%%s" s
+  | Ideref _ -> failwith "Cannot compile Ideref position directly"
+  | IAddr i -> Printf.sprintf "%d(%%rbp)" (i)
 
-let compile_left_value (lv : left_value) : string =
-  match lv with
-  | (pos, size) -> let cp = compile_pos pos in
-      match pos with
-      | Ireg _ -> Printf.sprintf "   push %s\n" cp
-      | _ ->
-        match size with
-        | 32 -> Printf.sprintf "   mov %s, %%eax\n   push %%eax\n" cp
-        | _ -> Printf.sprintf "   mov %s, %%rax\n   push %%rax\n" cp
-
-let compile_ivalue (v : value) : string =
-  match v with 
-  | Iconst n -> 
-      Printf.sprintf "   push $%d\n" n
-  | Ileft (pos, size) ->
-       match pos with
-       | Iglobal "fmt" ->Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
-       | _  -> compile_left_value (pos, size)
-      
   
 let rec compile_expr (e : iexpr) : string =
   match e with 
@@ -41,7 +24,6 @@ let rec compile_expr (e : iexpr) : string =
         "   sete %al\n" ^  
         "   movzbq %al, %rax\n" ^
         "   push %rax\n"
-      | _-> failwith "cas pointeur non traité"
       end
   | Ibinop (op, v1, v2) ->
       let v1_code = compile_expr v1 in
@@ -126,6 +108,36 @@ let rec compile_expr (e : iexpr) : string =
   | Iprint ->
       "   and $-16, %rsp \n    xor %rax, %rax\n   call printf\n   push %rax\n"
 
+
+
+and compile_left_value (lv : left_value) : string =
+  match lv with
+  | (pos, size) -> 
+      match pos with
+      | Ideref iexpr ->
+          let expr_code = compile_expr iexpr in
+          expr_code ^
+          "   pop %rax\n" ^
+          (match size with
+          | 32 -> "   mov (%rax), %eax\n   push %rax\n"
+          | _ -> "   mov (%rax), %rax\n   push %rax\n")
+      | Ireg _ -> let cp = compile_pos pos in Printf.sprintf "   push %s\n" cp
+      | _ -> let cp = compile_pos pos in
+        match size with
+        | 32 -> Printf.sprintf "   mov %s, %%eax\n   push %%eax\n" cp
+        | _ -> Printf.sprintf "   mov %s, %%rax\n   push %%rax\n" cp
+
+and  compile_ivalue (v : value) : string =
+  match v with 
+  | Iconst n -> 
+      Printf.sprintf "   push $%d\n" n
+  | Ileft (pos, size) ->
+       match pos with
+       | Iglobal "fmt" ->Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
+       | IAddr _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
+       | _  -> compile_left_value (pos, size)
+      
+
 let compile_ast (ast : iAST) : string =
   match ast with 
   | Ireturn e -> 
@@ -137,11 +149,22 @@ let compile_ast (ast : iAST) : string =
 
   | Iassign ((pos, size), e) ->
       let expr_code = compile_expr e in
-      let pos_str = compile_pos pos in
-      expr_code ^
-      (match size with
-      | 32 -> Printf.sprintf "   pop %%eax\n   mov %%eax, %s\n" pos_str
-      | _ -> Printf.sprintf "   pop %%rax\n   mov %%rax, %s\n" pos_str)
+      begin match pos with
+      | Ideref iexpr ->
+          let addr_code = compile_expr iexpr in
+          expr_code ^ addr_code ^
+          "   pop %rbx\n" ^ (* adresse *)
+          "   pop %rax\n" ^ (* valeur *)
+          (match size with
+          | 32 -> "   mov %eax, (%rbx)\n"
+          | _  -> "   mov %rax, (%rbx)\n")
+      | _ ->
+          let pos_str = compile_pos pos in
+          expr_code ^
+          (match size with
+          | 32 -> Printf.sprintf "   pop %%eax\n   mov %%eax, %s\n" pos_str
+          | _ -> Printf.sprintf "   pop %%rax\n   mov %%rax, %s\n" pos_str)
+      end
 
   | Ilabel s ->
       Printf.sprintf "%s:\n" s

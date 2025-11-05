@@ -13,6 +13,6 @@ and value = | Ileft of left_value | Iconst of int
 
 and left_value = pos * int  (* position in memory and size *)
 
-and pos = | Ilocal of int (* offset to RBP *) | Iglobal of string | Ireg of string 
+and pos = | Ilocal of int (* offset to RBP *) | Iglobal of string | Ireg of string | Ideref of iexpr | IAddr of int
 
 and iexpr = | Ivalue of value | Iunop of unop * iexpr | Ibinop of binop * iexpr * iexpr | Icall of string * iexpr list | Iprint
