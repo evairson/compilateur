@@ -1,6 +1,6 @@
 type ppos = Lexing.position
 
-type unop  = Opp  | Not | Pointeur
+type unop  = Opp  | Not
 type binop = Plus | Minus | Mul | Div | Rem | Lt  | Le | Gt | Ge | Eq | Neq | And | Or | Eqs | Neqs
 
 

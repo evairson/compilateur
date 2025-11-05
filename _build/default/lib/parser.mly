@@ -20,7 +20,7 @@
 
 %token IF ELSE WHILE RETURN BREAK CONTINUE
 
-%token STAR
+%token STAR ADDRESS
 
 
 /* priorites et associativites des tokens */
@@ -75,7 +75,6 @@ gdef:
   | TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
   | id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
 
-
   // | TINT id=IDENT LB e=expr RB SEMI { Garray(id, e, snd $loc) }
 
 ;
@@ -90,7 +89,8 @@ expr:
 | id=IDENT LP RP {Call(id,[],fst $loc,snd $loc)}
 | id=IDENT LP args=arg_list RP {Call(id,args,fst $loc, snd $loc)}
 
-| STAR e=expr { Unop(Pointeur,e,snd $loc) }  
+| STAR e=expr { Deref(e, snd $loc) }
+| ADDRESS id=IDENT { Address(id, snd $loc) }
 
 
 // | LB args=arg_list RB { Array(args,snd $loc) }
@@ -115,6 +115,7 @@ stmt:
 | id=IDENT AFFECT e=expr SEMI {Var_affect(id, e, snd $loc)}
 | id=IDENT LP RP SEMI {SCall(id,[],fst $loc,snd $loc)}
 | id=IDENT LP args=arg_list RP SEMI {SCall(id,args,fst $loc, snd $loc)}
+| STAR e1=expr AFFECT e2=expr SEMI { Pvar_affect(e1, e2, snd $loc)}
 | IF LP e = expr RP LB s=seq RB { If(e,s,None,fst $loc, snd $loc)}
 | IF LP e = expr RP LB s1=seq RB ELSE LB s2=seq RB { If(e,s1,Some s2,fst $loc, snd $loc)}
 

@@ -38,6 +38,7 @@ type token =
   | BEGIN
   | AND
   | AFFECT
+  | ADDRESS
 
 (* This exception is raised by the monolithic API functions. *)
 

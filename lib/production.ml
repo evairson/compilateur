@@ -24,7 +24,6 @@ let rec compile_expr (e : iexpr) : string =
         "   sete %al\n" ^  
         "   movzbq %al, %rax\n" ^
         "   push %rax\n"
-      | _-> failwith "cas pointeur non traité"
       end
   | Ibinop (op, v1, v2) ->
       let v1_code = compile_expr v1 in

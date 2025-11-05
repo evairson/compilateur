@@ -35,6 +35,7 @@ type token =
   | BEGIN
   | AND
   | AFFECT
+  | ADDRESS
 val menhir_begin_marker : int
 val xv_stmt : AST1.stmt
 val xv_seq : AST1.seq

@@ -20,6 +20,7 @@ rule token = parse
   | '/'     { DIV }
   | "=="    { EQ }
   | '='     { AFFECT }
+  | "&"     { ADDRESS }
 
   | ','     { COMMA }
   | ';'     { SEMI }
