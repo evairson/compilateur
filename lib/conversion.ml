@@ -74,9 +74,11 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
     let base =
       if List.mem_assoc name !locals_env then
         let (pos, _) = List.assoc name !locals_env in
-        Ivalue (Ileft pos)
+        match pos with
+          | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
+          | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
       else if List.mem_assoc name globales then
-        Ivalue (Ileft (Iglobal name, 64))
+        Ivalue (Ileft (GAddr name, 64))
       else
         failwith ("Tableau non déclaré : " ^ name)
     in
@@ -150,9 +152,11 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
     let base =
       if List.mem_assoc name !locals_env then
         let (pos, _) = List.assoc name !locals_env in
-        Ivalue (Ileft pos)
+        match pos with
+        | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
+        | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
       else if List.mem_assoc name globales then
-        Ivalue (Ileft (Iglobal name, 64))
+        Ivalue (Ileft (GAddr name, 64))
       else
         failwith ("Tableau non déclaré : " ^ name)
     in
