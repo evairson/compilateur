@@ -48,6 +48,9 @@ rule token = parse
   | "while"  { WHILE }
   | "return" { RETURN }
 
+  | "break"     { BREAK }
+  | "continue"  { CONTINUE }
+
   | "int"   { TINT }
 
   | integer  { CST(int_of_string (lexeme lexbuf)) }

@@ -15,11 +15,6 @@ type expr =
   | Array_get of string * expr * ppos
 
 
-  (* | Array of expr list * ppos
-  | Array_get of string * expr * ppos *)
-
-
-
 type  stmt =
     | Print of expr*ppos
     | Return of expr*ppos
@@ -30,11 +25,10 @@ type  stmt =
     | SCall of string * expr list * ppos * ppos
     | If of expr * seq * seq option * ppos * ppos (* expression, then, else, pos debut, pos fin *)
     | Array_affect of string * expr * expr * ppos
- (* | While  of expr * seq * ppos * ppos *)
-
-    (* | Break of ppos
+    | While  of expr * seq * ppos * ppos
+    | Break of ppos
     | Continue of ppos
-
+    (*
     | Lvar_p of string*ppos
     | Lvar_affect_p of string * expr * ppos
     | Var_affect_p of string * expr * ppos 

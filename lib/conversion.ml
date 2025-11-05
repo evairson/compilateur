@@ -23,6 +23,10 @@ let get_jump_number () : int =
   jump_number := j + 1;
   j
 
+(*on garde en memoire les debuts et fin de boucles afin de gerer les break et continue*)
+let breaks: string list ref = ref []
+let continues: string list ref = ref []
+
 
 let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexpr = 
    match e with
@@ -41,15 +45,15 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
         let pos = List.assoc name !locals_env in
         Ivalue (Ileft pos)
       
-      else if List.mem_assoc name globales then
-        Ivalue (Ileft (Iglobal name, 64))
-      
       else if List.mem_assoc name !params_env then
         let pos = List.assoc name !params_env in
         Ivalue (Ileft pos)
+
+      else if List.mem_assoc name globales then
+        Ivalue (Ileft (Iglobal name, 64))
       
       else
-        failwith ("Variable non declaree: " ^ name)
+        failwith ("Variable non declaree1: " ^ name)
   
   | Call (name, args, _, _) ->
       Icall (name, List.map (fun arg -> expr_to_iexpr arg globales) args)
@@ -60,6 +64,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
       match pos with
       | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
       | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
+
     else if List.mem_assoc name globales then
       Ivalue (Ileft (Iglobal name, 64))
     else
@@ -99,14 +104,19 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
   
   | Var_affect (name, expr, _) -> 
       let v = expr_to_iexpr expr globales in
+
       if List.mem_assoc name !locals_env then
         let pos = List.assoc name !locals_env in
         [ Iassign (pos, v) ]
-      else
-      (if List.mem_assoc name globales then
+
+      else if List.mem_assoc name !params_env then
+        let pos = List.assoc name !params_env in
+        [ Iassign (pos, v) ]
+
+      else if List.mem_assoc name globales then
           [Iassign ((Iglobal name, 64), v)]
       else
-        failwith ("Variable non declaree: " ^ name))
+        failwith ("Variable non declaree2: " ^ name)
   
   | Lvar (name, _) -> let pos = (Ilocal (get_offset ()), 64) in
       locals_env := (name, pos) :: !locals_env;
@@ -163,6 +173,43 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
     let addr = Ibinop (Plus, base, Ibinop (Mul, index, Ivalue (Iconst 8))) in
     [ Iassign ((Ideref addr, 64), value) ]
 
+  | While (cond, contenu, _, _)->
+
+    let jump = get_jump_number () in
+    let start_label = "start_while_" ^ string_of_int jump in
+    let end_label = "end_while_" ^ string_of_int (jump) in
+
+    (*On rajoute a la pile des break et des continues le point de depart et d'arrivee*)
+    continues := start_label :: !continues;
+    breaks := end_label :: !breaks;
+
+    let cond_iexpr = expr_to_iexpr cond globales in
+    let contenu_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales) contenu) in
+
+    (*On pop les derniers elts car on n'en a plus besoin*)
+    continues := List.tl !continues;
+    breaks := List.tl !breaks;
+
+    [Ilabel start_label;
+    Icondjump (cond_iexpr, end_label);] (* si cond == 0  alors sortir *)
+    @ contenu_iasts
+    @ [Ijump start_label;  (* reboucler *)
+    Ilabel end_label;   (* fin de boucle *)
+    ]
+  
+  | Break _ ->
+    if !breaks = [] then
+      failwith "Erreur: 'break' en dehors d'une boucle"
+    else
+      let label = List.hd !breaks in (*on regarde le premier elt de la pile*)
+      [ Ijump label ]
+
+  | Continue _ ->
+    if !continues = [] then
+      failwith "Erreur: 'continue' en dehors d'une boucle"
+    else
+      let label = List.hd !continues in
+      [ Ijump label ]
 
 (*On doit passer une premiere fois pour recuperer les variables globales*)
 let recupere_globals (p : program) : (string * int option) list =
