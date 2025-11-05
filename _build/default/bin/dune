@@ -1,4 +1,0 @@
-(executable
- (public_name les_4_fantastiques)
- (name main)
- (libraries les_4_fantastiques))

@@ -1,6 +1,0 @@
-description = ""
-requires = "menhirLib"
-archive(byte) = "les_4_fantastiques.cma"
-archive(native) = "les_4_fantastiques.cmxa"
-plugin(byte) = "les_4_fantastiques.cma"
-plugin(native) = "les_4_fantastiques.cmxs"
