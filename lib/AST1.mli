@@ -28,7 +28,7 @@ type  stmt =
     | Pvar_affect of expr * expr * ppos
     | SCall of string * expr list * ppos * ppos
     | If of expr * seq * seq option * ppos * ppos (* expression, then, else, pos debut, pos fin *)
- (* | While  of expr * seq * ppos * ppos *)
+    | While  of expr * seq * ppos * ppos
 
     (* | Break of ppos
     | Continue of ppos

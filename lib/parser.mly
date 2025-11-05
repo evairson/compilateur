@@ -120,11 +120,7 @@ stmt:
 | STAR e1=expr AFFECT e2=expr SEMI { Pvar_affect(e1, e2, snd $loc)}
 | IF LP e = expr RP BEGIN s=seq END { If(e,s,None,fst $loc, snd $loc)}
 | IF LP e = expr RP BEGIN s1=seq END ELSE BEGIN s2=seq END { If(e,s1,Some s2,fst $loc, snd $loc)}
-
-
-
-
-// | WHILE LP e=expr RP LB s=seq RB {While(e,s,fst $loc,snd $loc)}
+| WHILE LP e=expr RP BEGIN s=seq END {While(e,s,fst $loc,snd $loc)}
 
 
 // | BREAK SEMI {Break(snd $loc)}
