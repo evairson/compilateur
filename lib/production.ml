@@ -196,10 +196,12 @@ let compile_program (prog : iprogram) file =
   print oc ".section .data";
   print oc "    fmt: .string \"%d\\n\"";
 
-   List.iter
-    (fun (name, _) ->
-      Printf.fprintf oc "    %s: .quad 0\n" name)
-    vars;
+  List.iter
+    (fun (name, size_opt) ->
+      match size_opt with
+      | Some n -> Printf.fprintf oc "    %s: .space %d\n" name (n * 8)
+      | None -> Printf.fprintf oc "    %s: .quad 0\n" name)
+  vars;
 
   print oc ".section .text";
   List.iter

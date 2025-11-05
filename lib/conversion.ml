@@ -69,6 +69,21 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
       let ptr = expr_to_iexpr e globales in
       Ivalue (Ileft (Ideref ptr, 64))
 
+  | Array_get (name, index_expr, _) ->
+    let index = expr_to_iexpr index_expr globales in
+    let base =
+      if List.mem_assoc name !locals_env then
+        let (pos, _) = List.assoc name !locals_env in
+        Ivalue (Ileft pos)
+      else if List.mem_assoc name globales then
+        Ivalue (Ileft (Iglobal name, 64))
+      else
+        failwith ("Tableau non déclaré : " ^ name)
+    in
+    (* adresse = base + index * 8 *)
+    let addr = Ibinop (Plus, base, Ibinop (Mul, index, Ivalue (Iconst 8))) in
+    Ivalue (Ileft (Ideref addr, 64))
+
   (*renvoie une liste de iAST*)
 let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
   match s with
@@ -129,12 +144,34 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
       ] in
       iasts
 
+  | Array_affect (name, index_expr, value_expr, _) ->
+    let index = expr_to_iexpr index_expr globales in
+    let value = expr_to_iexpr value_expr globales in
+    let base =
+      if List.mem_assoc name !locals_env then
+        let (pos, _) = List.assoc name !locals_env in
+        Ivalue (Ileft pos)
+      else if List.mem_assoc name globales then
+        Ivalue (Ileft (Iglobal name, 64))
+      else
+        failwith ("Tableau non déclaré : " ^ name)
+    in
+    let addr = Ibinop (Plus, base, Ibinop (Mul, index, Ivalue (Iconst 8))) in
+    [ Iassign ((Ideref addr, 64), value) ]
+
+
 (*On doit passer une premiere fois pour recuperer les variables globales*)
-let recupere_globals (p : program) : (string *  int option ) list =
+let recupere_globals (p : program) : (string * int option) list =
   List.fold_left (fun acc g ->
     match g with
     | Gvar (name, _) -> (name, None) :: acc
-    (*| Gvar_affect (name, expr, _) -> (name, Some (expr_to_iexpr expr)) :: acc*)
+    | Garray (name, size_expr, _) ->
+        let size =
+          match size_expr with
+          | Cst (n, _) -> n
+          | _ -> failwith "La taille du tableau doit être une constante"
+        in
+        (name, Some size) :: acc
     | _ -> acc
   ) [] p
 

@@ -93,10 +93,10 @@ expr:
 
 | STAR e=expr { Deref(e, snd $loc) }
 | ADDRESS id=IDENT { Address(id, snd $loc) }
-
+| id=IDENT LB e=expr RB { Array_get (id, e, snd $loc) }
 
 // | LB args=arg_list RB { Array(args,snd $loc) }
-// | id=IDENT LB e=expr RB { Array_get (id, e, snd $loc) }
+
 
 
 
@@ -120,7 +120,7 @@ stmt:
 | STAR e1=expr AFFECT e2=expr SEMI { Pvar_affect(e1, e2, snd $loc)}
 | IF LP e = expr RP BEGIN s=seq END { If(e,s,None,fst $loc, snd $loc)}
 | IF LP e = expr RP BEGIN s1=seq END ELSE BEGIN s2=seq END { If(e,s1,Some s2,fst $loc, snd $loc)}
-
+| id=IDENT LB e1=expr RB AFFECT e2=expr SEMI { Array_affect(id, e1, e2, snd $loc) }
 
 
 
@@ -132,7 +132,7 @@ stmt:
 // | TINT STAR id=IDENT SEMI { Lvar_p(id, snd $loc) }
 // | STAR id=IDENT AFFECT e=expr SEMI {Var_affect_p(id, e, snd $loc)}
 // | TINT STAR id=IDENT AFFECT e=expr SEMI { Lvar_affect_p(id, e, snd $loc) }
-// | id=IDENT LB e1=expr RB AFFECT e2=expr SEMI { Array_affect(id, e1, e2, snd $loc) }
+
 
 ;
 
