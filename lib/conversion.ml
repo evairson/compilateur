@@ -54,6 +54,19 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
   | Call (name, args, _, _) ->
       Icall (name, List.map (fun arg -> expr_to_iexpr arg globales) args)
 
+  | Address (name, _) -> (* &x → address of x *)
+    if List.mem_assoc name !locals_env then
+      let (pos, _) = List.assoc name !locals_env in
+      Ivalue (Ileft (pos, 64))
+    else if List.mem_assoc name globales then
+      Ivalue (Ileft (Iglobal name, 64))
+    else
+      failwith ("Variable non déclarée: " ^ name)
+
+  | Deref (e, _) -> (* *ptr → value at address ptr *)
+      let ptr = expr_to_iexpr e globales in
+      Ivalue (Ileft (Ideref ptr, 64))
+
   (*renvoie une liste de iAST*)
 let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
   match s with
@@ -84,6 +97,11 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
       let pos = (Ilocal (get_offset ()), 64) in
       locals_env := (name, pos) :: !locals_env;
       [ Iassign (pos, v) ]
+
+  | Pvar_affect (expr_p, expr, _) -> let v = expr_to_iexpr expr globales in
+      let addr_iexpr = expr_to_iexpr expr_p globales in
+      let pos = (Ideref addr_iexpr, 64) in
+        [ Iassign (pos, v) ]
 
   | SCall (name, args, _, _) ->
       [ Ival (Icall (name, List.map (fun arg -> expr_to_iexpr arg globales) args)) ]

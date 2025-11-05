@@ -8,9 +8,10 @@ type expr =
   | Cst    of int * ppos
   | Unop   of unop * expr * ppos
   | Binop  of binop * expr * expr * ppos
-(* ajouté *)
   | Var of string * ppos
   | Call of string * expr list * ppos * ppos
+  | Address of string * ppos
+  | Deref of expr * ppos
 
 type  stmt =
     | Print of expr*ppos
@@ -18,6 +19,7 @@ type  stmt =
     | Lvar of string*ppos
     | Lvar_affect of string * expr * ppos
     | Var_affect of string * expr * ppos
+    | Pvar_affect of expr * expr * ppos
     | SCall of string * expr list * ppos * ppos
     | If of expr * seq * seq option * ppos * ppos (* expression, then, else, pos debut, pos fin *)
  (* 
