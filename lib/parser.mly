@@ -76,7 +76,7 @@ gdef:
   | TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
   | TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
   | id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
-
+  | TINT STAR id=IDENT SEMI { Gptr(id, snd $loc) }
   | TINT id=IDENT LB e=expr RB SEMI { Garray(id, e, snd $loc) }
 
 ;

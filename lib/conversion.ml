@@ -50,7 +50,8 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
         Ivalue (Ileft pos)
 
       else if List.mem_assoc name globales then
-        Ivalue (Ileft (Iglobal name, 64))
+        let (_, _, is_ptr) = List.assoc name globales in
+        Ivalue (Ileft (if is_ptr then (GAddr name) else (Iglobal name),  64))
       
       else
         failwith ("Variable non declaree1: " ^ name)
@@ -66,7 +67,8 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
       | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
 
     else if List.mem_assoc name globales then
-      Ivalue (Ileft (Iglobal name, 64))
+      let (_, _, is_ptr) = List.assoc name globales in
+      Ivalue (Ileft (if is_ptr then (GAddr name) else (Iglobal name), 64))
     else
       failwith ("Variable non déclarée: " ^ name)
 
@@ -126,7 +128,8 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
         [ Iassign (pos, v) ]
 
       else if List.mem_assoc name globales then
-          [Iassign ((Iglobal name, 64), v)]
+          let (_, _, is_ptr) = List.assoc name globales in
+          [ Iassign ((if is_ptr then (GAddr name) else (Iglobal name), 64), v) ]
       else
         failwith ("Variable non declaree2: " ^ name)
   
@@ -224,17 +227,18 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
       [ Ijump label ]
 
 (*On doit passer une premiere fois pour recuperer les variables globales*)
-let recupere_globals (p : program) : (string * int option) list =
+let recupere_globals (p : program) : (string * int option * bool) list =
   List.fold_left (fun acc g ->
     match g with
-    | Gvar (name, _) -> (name, None) :: acc
+    | Gvar (name, _) -> (name, None, false) :: acc
     | Garray (name, size_expr, _) ->
         let size =
           match size_expr with
           | Cst (n, _) -> n
           | _ -> failwith "La taille du tableau doit être une constante"
         in
-        (name, Some size) :: acc
+        (name, Some size, false) :: acc
+    | Gptr (name, _) -> (name, None, true) :: acc
     | _ -> acc
   ) [] p
 
@@ -258,6 +262,7 @@ let program1_to_iprogram (p : program) : iprogram =
         (let body = List.flatten (List.map (fun s -> stmt_to_iAST s symboles) stmts) in
  (*on garde les globales pour recuperer les valeurs dans la suite*)
         (name, body) :: acc)
+    
     | _ -> acc
   ) [] p in
   (List.rev functions, List.rev symboles)
