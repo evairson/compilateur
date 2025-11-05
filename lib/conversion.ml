@@ -57,7 +57,9 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
   | Address (name, _) -> (* &x → address of x *)
     if List.mem_assoc name !locals_env then
       let (pos, _) = List.assoc name !locals_env in
-      Ivalue (Ileft (pos, 64))
+      match pos with
+      | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
+      | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
     else if List.mem_assoc name globales then
       Ivalue (Ileft (Iglobal name, 64))
     else

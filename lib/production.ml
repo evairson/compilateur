@@ -7,7 +7,7 @@ let compile_pos (p : pos) : string =
   | Iglobal s -> Printf.sprintf "%s(%%rip)" s
   | Ireg s -> Printf.sprintf "%%%s" s
   | Ideref _ -> failwith "Cannot compile Ideref position directly"
-
+  | IAddr i -> Printf.sprintf "%d(%%rbp)" (i)
 
   
 let rec compile_expr (e : iexpr) : string =
@@ -134,6 +134,7 @@ and  compile_ivalue (v : value) : string =
   | Ileft (pos, size) ->
        match pos with
        | Iglobal "fmt" ->Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
+       | IAddr _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
        | _  -> compile_left_value (pos, size)
       
 
