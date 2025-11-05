@@ -24,14 +24,14 @@ int main() {
   z=3;
   int i ;
   i = 0 ;
-
-  print_int(x);
-  print_int(y);
-  print_int(z);
-  sw(&x,&y);
-  sw(&y,&z);
-  i=i+1;
-  
+  while (i < 10) {
+    print_int(x);
+    print_int(y);
+    print_int(z);
+    sw(&x,&y);
+    sw(&y,&z);
+    i=i+1;
+  }
   print_int(f());
   return 0;
 }
