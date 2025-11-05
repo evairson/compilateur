@@ -20,7 +20,7 @@
 
 %token IF ELSE WHILE RETURN BREAK CONTINUE
 
-%token STAR ADDRESS
+%token STAR ADDRESS MALLOC SIZEOF
 
 
 /* priorites et associativites des tokens */
@@ -94,12 +94,9 @@ expr:
 | STAR e=expr { Deref(e, snd $loc) }
 | ADDRESS id=IDENT { Address(id, snd $loc) }
 | id=IDENT LB e=expr RB { Array_get (id, e, snd $loc) }
-
-// | LB args=arg_list RB { Array(args,snd $loc) }
-
-
-
-
+| MALLOC LP e=expr RP { Malloc(e, snd $loc) }
+| SIZEOF LP TINT RP { Sizeof("int", snd $loc) }
+| SIZEOF LP TINT STAR RP { Sizeof("int*", snd $loc) }
 
 ;
 

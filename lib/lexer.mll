@@ -53,6 +53,9 @@ rule token = parse
 
   | "int"   { TINT }
 
+  | "malloc" { MALLOC }
+  | "sizeof" { SIZEOF }
+
   | integer  { CST(int_of_string (lexeme lexbuf)) }
   | ident    { IDENT (lexeme lexbuf) }
   | space+   { token lexbuf }

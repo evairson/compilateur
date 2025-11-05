@@ -13,7 +13,8 @@ type expr =
   | Address of string * ppos
   | Deref of expr * ppos
   | Array_get of string * expr * ppos
-
+  | Malloc of expr * ppos
+  | Sizeof of string * ppos
 
 type  stmt =
     | Print of expr*ppos

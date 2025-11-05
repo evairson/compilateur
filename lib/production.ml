@@ -195,6 +195,7 @@ let compile_program (prog : iprogram) file =
   let (cmd, vars) = prog in
 
   print oc ".extern printf";
+  print oc ".extern malloc";
   print oc ".section .data";
   print oc "    fmt: .string \"%d\\n\"";
 

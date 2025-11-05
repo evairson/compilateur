@@ -91,6 +91,18 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
     let addr = Ibinop (Plus, base, Ibinop (Mul, index, Ivalue (Iconst 8))) in
     Ivalue (Ileft (Ideref addr, 64))
 
+  | Sizeof (tname, _) ->
+    let size =
+      match tname with
+      | "int" | "int*" -> 8
+      | _ -> failwith ("sizeof: type inconnu " ^ tname)
+    in
+    Ivalue (Iconst size)
+
+  | Malloc (size_expr, _) ->
+    let size_iexpr = expr_to_iexpr size_expr globales in
+    Icall ("malloc", [size_iexpr])
+
   (*renvoie une liste de iAST*)
 let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
   match s with
