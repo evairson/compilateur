@@ -29,10 +29,9 @@ type  stmt =
     | SCall of string * expr list * ppos * ppos
     | If of expr * seq * seq option * ppos * ppos (* expression, then, else, pos debut, pos fin *)
     | While  of expr * seq * ppos * ppos
-
-    (* | Break of ppos
+    | Break of ppos
     | Continue of ppos
-
+    (*
     | Lvar_p of string*ppos
     | Lvar_affect_p of string * expr * ppos
     | Var_affect_p of string * expr * ppos 

@@ -23,6 +23,10 @@ let get_jump_number () : int =
   jump_number := j + 1;
   j
 
+(*on garde en memoire les debuts et fin de boucles afin de gerer les break et continue*)
+let breaks: string list ref = ref []
+let continues: string list ref = ref []
+
 
 let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexpr = 
    match e with
@@ -136,12 +140,21 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
       iasts
 
   | While (cond, contenu, _, _)->
-    let cond_iexpr = expr_to_iexpr cond globales in
-    let contenu_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales) contenu) in
 
     let jump = get_jump_number () in
     let start_label = "start_while_" ^ string_of_int jump in
     let end_label = "end_while_" ^ string_of_int (jump) in
+
+    (*On rajoute a la pile des break et des continues le point de depart et d'arrivee*)
+    continues := start_label :: !continues;
+    breaks := end_label :: !breaks;
+
+    let cond_iexpr = expr_to_iexpr cond globales in
+    let contenu_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales) contenu) in
+
+    (*On pop les derniers elts car on n'en a plus besoin*)
+    continues := List.tl !continues;
+    breaks := List.tl !breaks;
 
     [Ilabel start_label;
     Icondjump (cond_iexpr, end_label);] (* si cond == 0  alors sortir *)
@@ -149,6 +162,20 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
     @ [Ijump start_label;  (* reboucler *)
     Ilabel end_label;   (* fin de boucle *)
     ]
+  
+  | Break _ ->
+    if !breaks = [] then
+      failwith "Erreur: 'break' en dehors d'une boucle"
+    else
+      let label = List.hd !breaks in (*on regarde le premier elt de la pile*)
+      [ Ijump label ]
+
+  | Continue _ ->
+    if !continues = [] then
+      failwith "Erreur: 'continue' en dehors d'une boucle"
+    else
+      let label = List.hd !continues in
+      [ Ijump label ]
 
 (*On doit passer une premiere fois pour recuperer les variables globales*)
 let recupere_globals (p : program) : (string *  int option ) list =
