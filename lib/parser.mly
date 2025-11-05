@@ -118,8 +118,8 @@ stmt:
 | id=IDENT LP RP SEMI {SCall(id,[],fst $loc,snd $loc)}
 | id=IDENT LP args=arg_list RP SEMI {SCall(id,args,fst $loc, snd $loc)}
 | STAR e1=expr AFFECT e2=expr SEMI { Pvar_affect(e1, e2, snd $loc)}
-| IF LP e = expr RP LB s=seq RB { If(e,s,None,fst $loc, snd $loc)}
-| IF LP e = expr RP LB s1=seq RB ELSE LB s2=seq RB { If(e,s1,Some s2,fst $loc, snd $loc)}
+| IF LP e = expr RP BEGIN s=seq END { If(e,s,None,fst $loc, snd $loc)}
+| IF LP e = expr RP BEGIN s1=seq END ELSE BEGIN s2=seq END { If(e,s1,Some s2,fst $loc, snd $loc)}
 
 
 
