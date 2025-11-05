@@ -1,0 +1,106 @@
+(lang dune 3.20)
+(name les_4_fantastiques)
+(sections
+ (lib .)
+ (libexec .)
+ (bin ../../bin)
+ (doc ../../doc/les_4_fantastiques))
+(files
+ (lib
+  (AST1.mli
+   AST2.ml
+   META
+   conversion.ml
+   dune-package
+   les_4_fantastiques.a
+   les_4_fantastiques.cma
+   les_4_fantastiques.cmi
+   les_4_fantastiques.cmt
+   les_4_fantastiques.cmx
+   les_4_fantastiques.cmxa
+   les_4_fantastiques.ml
+   les_4_fantastiques__AST1.cmi
+   les_4_fantastiques__AST1.cmti
+   les_4_fantastiques__AST2.cmi
+   les_4_fantastiques__AST2.cmt
+   les_4_fantastiques__AST2.cmx
+   les_4_fantastiques__Conversion.cmi
+   les_4_fantastiques__Conversion.cmt
+   les_4_fantastiques__Conversion.cmx
+   les_4_fantastiques__Lexer.cmi
+   les_4_fantastiques__Lexer.cmt
+   les_4_fantastiques__Lexer.cmx
+   les_4_fantastiques__Parser.cmi
+   les_4_fantastiques__Parser.cmt
+   les_4_fantastiques__Parser.cmti
+   les_4_fantastiques__Parser.cmx
+   les_4_fantastiques__Production.cmi
+   les_4_fantastiques__Production.cmt
+   les_4_fantastiques__Production.cmti
+   les_4_fantastiques__Production.cmx
+   les_4_fantastiques__Typechecker.cmi
+   les_4_fantastiques__Typechecker.cmt
+   les_4_fantastiques__Typechecker.cmx
+   lexer.ml
+   opam
+   parser.ml
+   parser.mli
+   production.ml
+   production.mli
+   typechecker.ml))
+ (libexec (les_4_fantastiques.cmxs))
+ (bin (les_4_fantastiques))
+ (doc (README.md)))
+(library
+ (name les_4_fantastiques)
+ (kind normal)
+ (archives (byte les_4_fantastiques.cma) (native les_4_fantastiques.cmxa))
+ (plugins (byte les_4_fantastiques.cma) (native les_4_fantastiques.cmxs))
+ (native_archives les_4_fantastiques.a)
+ (requires menhirLib)
+ (main_module_name Les_4_fantastiques)
+ (modes byte native)
+ (modules
+  (wrapped
+   (group
+    (alias
+     (obj_name les_4_fantastiques)
+     (visibility public)
+     (kind alias)
+     (source
+      (path Les_4_fantastiques)
+      (impl (path les_4_fantastiques.ml-gen))))
+    (name Les_4_fantastiques)
+    (modules
+     (module
+      (obj_name les_4_fantastiques__AST1)
+      (visibility public)
+      (source (path AST1) (intf (path AST1.mli))))
+     (module
+      (obj_name les_4_fantastiques__AST2)
+      (visibility public)
+      (source (path AST2) (impl (path AST2.ml))))
+     (module
+      (obj_name les_4_fantastiques__Conversion)
+      (visibility public)
+      (source (path Conversion) (impl (path conversion.ml))))
+     (module
+      (obj_name les_4_fantastiques__Lexer)
+      (visibility public)
+      (source (path Lexer) (impl (path lexer.ml))))
+     (module
+      (obj_name les_4_fantastiques__Parser)
+      (visibility public)
+      (source (path Parser) (intf (path parser.mli)) (impl (path parser.ml))))
+     (module
+      (obj_name les_4_fantastiques__Production)
+      (visibility public)
+      (source
+       (path Production)
+       (intf (path production.mli))
+       (impl (path production.ml))))
+     (module
+      (obj_name les_4_fantastiques__Typechecker)
+      (visibility public)
+      (source (path Typechecker) (impl (path typechecker.ml))))))
+   (wrapped true))))
