@@ -1,5 +1,13 @@
 open AST2
 
+(*logique paresseuse*)
+let compteur_lazy = ref 0 
+
+let label prefix = 
+  let l = Printf.sprintf "%s_%d" prefix !compteur_lazy in 
+  incr compteur_lazy; 
+  l
+
 (*Tentative d'ajout*)
 let compile_pos (p : pos) : string =
   match p with
@@ -26,70 +34,88 @@ let rec compile_expr (e : iexpr) : string =
         "   movzbq %al, %rax\n" ^
         "   push %rax\n"
       end
-  | Ibinop (op, v1, v2) ->
-      let v1_code = compile_expr v1 in
-      let v2_code = compile_expr v2 in
-      begin match op with
-      | Plus -> v1_code ^ v2_code ^
-      "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
-      | Minus ->  v1_code ^ v2_code ^
-        "   pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
-      | Mul ->  v1_code ^ v2_code ^
-        "   pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
-      | Div ->  v1_code ^ v2_code ^
-        "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
-      | Rem ->  v1_code ^ v2_code ^
-        "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
-      | Eq ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
-      | Neq ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
-      | Lt ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setl %al\n   movzb %al, %rax\n   push %rax\n"
-      | Gt ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setg %al\n   movzb %al, %rax\n   push %rax\n"
-      | Le -> 
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setle %al\n   movzb %al, %rax\n   push %rax\n"
-      | Ge ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setge %al\n   movzb %al, %rax\n   push %rax\n"
-      | Eqs ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
-      | Neqs ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
-      | And ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n" ^
-          "   pop %rax\n" ^
-          "   cmp $0, %rax\n" ^
-          "   setne %al\n" ^
-          "   movzbq %al, %rax\n" ^
-          "   cmp $0, %rbx\n" ^
-          "   setne %bl\n" ^
-          "   and %bl, %al\n" ^
-          "   movzbq %al, %rax\n" ^
-          "   push %rax\n"
-
-      | Or ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n" ^
-          "   pop %rax\n" ^
-          "   cmp $0, %rax\n" ^
-          "   setne %al\n" ^
-          "   movzbq %al, %rax\n" ^
-          "   cmp $0, %rbx\n" ^
-          "   setne %bl\n" ^
-          "   or %bl, %al\n" ^
-          "   movzbq %al, %rax\n" ^
-          "   push %rax\n"
-      end
+      | Ibinop (op, v1, v2) ->
+        begin
+        let v1_code = compile_expr v1 in
+        match op with 
+        | Or -> 
+            begin
+            let label_true = label "or_true" in
+            let label_end  = label "or_end" in
+            v1_code ^
+            "   pop %rax\n" ^
+            "   cmp $0, %rax\n" ^
+            Printf.sprintf "   jne %s\n" label_true ^
+            (compile_expr v2) ^
+            "   pop %rax\n" ^
+            "   cmp $0, %rax\n" ^
+            "   setne %al\n" ^
+            "   movzbq %al, %rax\n" ^
+            Printf.sprintf "   jmp %s\n" label_end ^
+            Printf.sprintf "%s:\n" label_true ^
+            "   mov $1, %rax\n" ^
+            Printf.sprintf "%s:\n" label_end ^
+            "   push %rax\n"
+            end
+        | And ->
+            begin
+            let label_false = label "and_false" in
+            let label_end   = label "and_end" in
+            v1_code ^
+            "   pop %rax\n" ^
+            "   cmp $0, %rax\n" ^
+            Printf.sprintf "   je %s\n" label_false ^
+            (compile_expr v2) ^
+            "   pop %rax\n" ^
+            "   cmp $0, %rax\n" ^
+            "   setne %al\n" ^
+            "   movzbq %al, %rax\n" ^ 
+            Printf.sprintf "   jmp %s\n" label_end ^
+            Printf.sprintf "%s:\n" label_false ^
+            "   mov $0, %rax\n" ^
+            Printf.sprintf "%s:\n" label_end ^
+            "   push %rax\n"
+            end
+        | _ -> begin 
+                let v2_code = compile_expr v2 in
+                match op with
+                | Plus -> v1_code ^ v2_code ^
+                "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
+                | Minus ->  v1_code ^ v2_code ^
+                  "   pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
+                | Mul ->  v1_code ^ v2_code ^
+                  "   pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
+                | Div ->  v1_code ^ v2_code ^
+                  "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
+                | Rem ->  v1_code ^ v2_code ^
+                  "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
+                | Eq ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
+                | Neq ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
+                | Lt ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setl %al\n   movzb %al, %rax\n   push %rax\n"
+                | Gt ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setg %al\n   movzb %al, %rax\n   push %rax\n"
+                | Le -> 
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setle %al\n   movzb %al, %rax\n   push %rax\n"
+                | Ge ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setge %al\n   movzb %al, %rax\n   push %rax\n"
+                | Eqs ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
+                | Neqs ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
+                | _ -> failwith "mauvais opérateur dans fonction compile expr"
+              end
+        end
 
   | Icall (name, args) ->
       let args_code =
