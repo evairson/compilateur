@@ -8,7 +8,21 @@ let label prefix =
   incr compteur_lazy; 
   l
 
-(*Tentative d'ajout*)
+(* On stocke les chaînes pour les mettre dans .data *)
+let string_labels : (string, string) Hashtbl.t = Hashtbl.create 10
+let string_counter = ref 0
+
+(* Renvoie un label pour une chaîne donnée *)
+let get_string_label (s : string) : string =
+  try
+    Hashtbl.find string_labels s
+  with Not_found ->
+    let label = Printf.sprintf "str_%d" !string_counter in
+    incr string_counter;
+    Hashtbl.add string_labels s label;
+    label
+
+
 let compile_pos (p : pos) : string =
   match p with
   | Ilocal i -> Printf.sprintf "%d(%%rbp)" (i)
@@ -118,7 +132,7 @@ let rec compile_expr (e : iexpr) : string =
         end
 
   | Icall (name, args) ->
-      let args_code =
+    let args_code =
         List.rev_map (fun arg ->
           let v_code = compile_expr arg in
           v_code
@@ -135,7 +149,18 @@ let rec compile_expr (e : iexpr) : string =
   | Iprint ->
       "   and $-16, %rsp \n    xor %rax, %rax\n   call printf\n   push %rax\n"
 
-
+(* Pour scanf(&d), qui a besoin de l'adresse de l'argument *)
+and compile_lv_address (pos : pos) : string =
+  match pos with
+  | Ilocal i -> Printf.sprintf "   lea %d(%%rbp), %%rax\n" i
+  | Iglobal s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
+  | GAddr s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
+  | IAddr i -> Printf.sprintf "   lea %d(%%rbp), %%rax\n" i
+  (* Si c'est un pointeur, l'expr est déjà l'adresse *)
+  | Ideref iexpr ->
+      let expr_code = compile_expr iexpr in
+      expr_code ^ "   pop %rax\n"
+  | Ireg s -> failwith ("Ne peut pas prendre l'adresse d'un registre: " ^ s)
 
 and compile_left_value (lv : left_value) : string =
   match lv with
@@ -206,6 +231,26 @@ let compile_ast (ast : iAST) : string =
   | Ijump label ->
       Printf.sprintf "   jmp %s\n" label 
 
+  | Iprintf (format_str, e) ->
+      let format_label = get_string_label format_str in
+      let expr_code = compile_expr e in 
+      expr_code ^
+      "   pop %rsi\n" ^  (* argument 2 *)
+      Printf.sprintf "   lea %s(%%rip), %%rdi\n" format_label ^ (* argument (le format) *)
+      "   xor %rax, %rax\n" ^ 
+      "   and $-16, %rsp\n" ^
+      "   call printf\n"
+  
+  | Iscanf (format_str, (pos, _)) ->
+      let format_label = get_string_label format_str in
+      let addr_code = compile_lv_address pos in (* Met l'adresse dans %rax *)
+      addr_code ^
+      "   mov %rax, %rsi\n" ^ (* argument 2 *)
+      Printf.sprintf "   lea %s(%%rip), %%rdi\n" format_label ^ (* argument 1 (format) *)
+      "   xor %rax, %rax\n" ^ 
+      "   and $-16, %rsp\n" ^ 
+      "   call scanf\n"
+
 
 
 let compile_asts (name : string) (asts : iAST list) : string =
@@ -220,19 +265,33 @@ let compile_program (prog : iprogram) file =
   let print oc s = output_string oc (s ^ "\n") in
   let (cmd, vars) = prog in
 
-  print oc ".extern printf";
-  print oc ".section .data";
-  print oc "    fmt: .string \"%d\\n\"";
+  (*On doit passer a travers le code avant pour que la table string_labels soit remplie*)
+  let text_section_code =
+    List.map (fun (name, asts) -> compile_asts name asts) cmd
+    |> String.concat "\n"
+  in
 
+  print oc ".extern printf";
+  print oc ".extern scanf";
+
+  (*les globales*)
+  print oc "\n.section .data";
+  print oc "    fmt: .string \"%d\\n\"";
   List.iter
     (fun (name, size_opt) ->
       match size_opt with
       | Some n -> Printf.fprintf oc "    %s: .space %d\n" name (n * 8)
       | None -> Printf.fprintf oc "    %s: .quad 0\n" name)
-  vars;
+    vars;
+
+  (*Les formats*)
+  print oc "\n.section .rodata";
+  Hashtbl.iter (fun (str_content) (str_label) ->
+      (* On utilise String.escaped pour gérer les \n, \t *)
+      let escaped_str = String.escaped str_content in
+      Printf.fprintf oc "%s:\n    .string \"%s\"\n" str_label escaped_str
+  ) string_labels;
 
   print oc ".section .text";
-  List.iter
-    (fun (name, asts) -> print oc (compile_asts name asts))
-    cmd;
+  print oc text_section_code;
   close_out oc

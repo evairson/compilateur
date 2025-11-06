@@ -28,6 +28,8 @@ type  stmt =
     | While  of expr * seq * ppos * ppos
     | Break of ppos
     | Continue of ppos
+    | PrintfCall of string * expr * ppos
+    | ScanfCall of string * expr * ppos
     (*
     | Lvar_p of string*ppos
     | Lvar_affect_p of string * expr * ppos
