@@ -27,8 +27,15 @@ let get_jump_number () : int =
 let breaks: string list ref = ref []
 let continues: string list ref = ref []
 
+let mem_assoc3 key lst =
+  List.exists (fun (k, _, _) -> k = key) lst
 
-let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexpr = 
+let assoc3 key lst =
+  let (_, v, b) = List.find (fun (k, _, _) -> k = key) lst in
+  (v, b)
+
+
+let rec expr_to_iexpr (e : expr) (globales : (string * int option * bool) list) : iexpr = 
    match e with
   | Cst (n, _) -> Ivalue (Iconst n)
   | Binop (op, e1, e2, _) ->
@@ -49,9 +56,9 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
         let pos = List.assoc name !params_env in
         Ivalue (Ileft pos)
 
-      else if List.mem_assoc name globales then
-        let (_, _, is_ptr) = List.assoc name globales in
-        Ivalue (Ileft (if is_ptr then (GAddr name) else (Iglobal name),  64))
+      else if mem_assoc3 name globales then
+        let (_, is_ptr) = assoc3 name globales in
+        Ivalue (Ileft ((if is_ptr then IAddrG name else Iglobal name), 64))
       
       else
         failwith ("Variable non declaree1: " ^ name)
@@ -66,9 +73,9 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
       | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
       | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
 
-    else if List.mem_assoc name globales then
-      let (_, _, is_ptr) = List.assoc name globales in
-      Ivalue (Ileft (if is_ptr then (GAddr name) else (Iglobal name), 64))
+    else if mem_assoc3 name globales then
+      let (_, is_ptr) = assoc3 name globales in
+      Ivalue (Ileft ((if is_ptr then (IAddrG name) else (Iglobal name)), 64))
     else
       failwith ("Variable non déclarée: " ^ name)
 
@@ -84,8 +91,8 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
         match pos with
           | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
           | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
-      else if List.mem_assoc name globales then
-        Ivalue (Ileft (GAddr name, 64))
+      else if mem_assoc3 name globales then
+        Ivalue (Ileft (IAddrG name, 64))
       else
         failwith ("Tableau non déclaré : " ^ name)
     in
@@ -106,7 +113,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
     Icall ("malloc", [size_iexpr])
 
   (*renvoie une liste de iAST*)
-let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
+let rec stmt_to_iAST (s : stmt) (globales : (string * int option * bool) list) : iAST list =
   match s with
   | Print (e, _) -> let v = expr_to_iexpr e globales in
       [ Iassign ((Ireg "rsi", 64), v); 
@@ -127,9 +134,9 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
         let pos = List.assoc name !params_env in
         [ Iassign (pos, v) ]
 
-      else if List.mem_assoc name globales then
-          let (_, _, is_ptr) = List.assoc name globales in
-          [ Iassign ((if is_ptr then (GAddr name) else (Iglobal name), 64), v) ]
+      else if mem_assoc3 name globales then
+          let (_, is_ptr) = assoc3 name globales in
+          [ Iassign (((if is_ptr then (IAddrG name) else (Iglobal name)), 64), v) ]
       else
         failwith ("Variable non declaree2: " ^ name)
   
@@ -180,8 +187,8 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
         match pos with
         | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
         | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
-      else if List.mem_assoc name globales then
-        Ivalue (Ileft (GAddr name, 64))
+      else if mem_assoc3 name globales then
+        Ivalue (Ileft (IAddrG name, 64))
       else
         failwith ("Tableau non déclaré : " ^ name)
     in
@@ -265,4 +272,5 @@ let program1_to_iprogram (p : program) : iprogram =
     
     | _ -> acc
   ) [] p in
-  (List.rev functions, List.rev symboles)
+  (List.rev functions, List.map (fun (a, b, _) -> (a, b)) (List.rev symboles))
+
