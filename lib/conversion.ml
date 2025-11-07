@@ -36,33 +36,25 @@ let continues: string list ref = ref []
 let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr = 
    match e with
   | Cst (n, _) -> Ivalue (Iconst n)
-  | Binop (op, e1, e2, _) ->
-      let v1 = expr_to_iexpr e1 globales in
-      let v2 = expr_to_iexpr e2 globales in
-      (match v1, v2 with
-      | Ivalue (Ileft (Iglobal name, _)), _ ->
-          (if List.mem_assoc name !vars_type then
-            let typ = List.assoc name !vars_type in
-            (match typ with
-            | Ptr when (op = Plus || op = Minus) ->
-                let size = 8 in
-                let scaled_v2 = Ibinop (Mul, v2, Ivalue (Iconst size)) in
-                Ibinop (op, v1, scaled_v2)
-            | _ -> Ibinop (op, v1, v2))
-          else
-            Ibinop (op, v1, v2))
-      | _, Ivalue (Ileft (Iglobal name, _)) ->
-          (if List.mem_assoc name !vars_type then
-            let typ = List.assoc name !vars_type in
-            (match typ with
-            | Ptr when (op = Plus || op = Minus) ->
-                let size = 8 in
-                let scaled_v1 = Ibinop (Mul, v1, Ivalue (Iconst size)) in
-                Ibinop (op, scaled_v1, v2)
-            | _ -> Ibinop (op, v1, v2))
-          else
-            Ibinop (op, v1, v2))
-      | _ -> Ibinop (op, v1, v2))
+    | Binop (op, e1, e2, _) ->
+      (match e1 with 
+      | Var (name, _) when List.mem_assoc name !vars_type ->
+          let typ = List.assoc name !vars_type in
+          (match typ with
+          | Ptr when (op = Plus || op = Minus) ->
+              let v1 = expr_to_iexpr e1 globales in
+              let v2 = expr_to_iexpr e2 globales in
+              let size = 8 in
+              let scaled_v2 = Ibinop (Mul, v2, Ivalue (Iconst size)) in
+              Ibinop (op, v1, scaled_v2)
+          | _ ->
+              let v1 = expr_to_iexpr e1 globales in
+              let v2 = expr_to_iexpr e2 globales in
+              Ibinop (op, v1, v2))
+      | _ ->
+          let v1 = expr_to_iexpr e1 globales in
+          let v2 = expr_to_iexpr e2 globales in
+          Ibinop (op, v1, v2))
 
   | Unop (op, e1, _) ->
       let v1 = expr_to_iexpr e1 globales in
@@ -78,7 +70,13 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr
         Ivalue (Ileft pos)
 
       else if List.mem_assoc name globales then
-        Ivalue (Ileft (Iglobal name, 64))
+        if List.mem_assoc name !vars_type then
+          let typ = List.assoc name !vars_type in
+          (match typ with
+          | Ptr -> Ivalue (Ileft (IAddrG name, 64))
+          | Int -> Ivalue (Ileft (Iglobal name, 64)))
+        else
+          Ivalue (Ileft (Iglobal name, 64))
       
       else
         failwith ("Variable non declaree1: " ^ name)
