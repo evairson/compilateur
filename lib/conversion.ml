@@ -147,8 +147,28 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST l
 
   | SCall (name, args, _, _) ->
       [ Ival (Icall (name, List.map (fun arg -> expr_to_iexpr arg globales) args)) ]
+  
+  | PrintfCall (format_str, e, _) ->
+      let ie = expr_to_iexpr e globales in
+      [ Iprintf (format_str, ie) ]
+  
+  | ScanfCall (format_str, e, _) ->
+      (match e with
+       | Address (name, _) ->
+           let lv =
+             if List.mem_assoc name !locals_env then
+               List.assoc name !locals_env
+             else if List.mem_assoc name !params_env then
+               List.assoc name !params_env
+             else if List.mem_assoc name globales then
+               (Iglobal name, 64) (* 64 bits = 8 octets *)
+             else
+               failwith ("Variable non declaree pour scanf: " ^ name)
+           in
+           [ Iscanf (format_str, lv) ]
+       | _ ->
+           failwith "Scanf attend une adresse (ex: &variable)")
       
-
   | If (cond, then_branch, else_branch, _, _) ->
       let cond_iexpr = expr_to_iexpr cond globales in
       let then_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales) then_branch) in
@@ -223,6 +243,8 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST l
     else
       let label = List.hd !continues in
       [ Ijump label ]
+  
+
 
 (*On doit passer une premiere fois pour recuperer les variables globales*)
 let recupere_globals (p : program) : (string * int option) list =

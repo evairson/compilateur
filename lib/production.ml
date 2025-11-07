@@ -1,6 +1,28 @@
 open AST2
 
-(*Tentative d'ajout*)
+(*logique paresseuse*)
+let compteur_lazy = ref 0 
+
+let label prefix = 
+  let l = Printf.sprintf "%s_%d" prefix !compteur_lazy in 
+  incr compteur_lazy; 
+  l
+
+(* On stocke les chaînes pour les mettre dans .data *)
+let string_labels : (string, string) Hashtbl.t = Hashtbl.create 10
+let string_counter = ref 0
+
+(* Renvoie un label pour une chaîne donnée *)
+let get_string_label (s : string) : string =
+  try
+    Hashtbl.find string_labels s
+  with Not_found ->
+    let label = Printf.sprintf "str_%d" !string_counter in
+    incr string_counter;
+    Hashtbl.add string_labels s label;
+    label
+
+
 let compile_pos (p : pos) : string =
   match p with
   | Ilocal i -> Printf.sprintf "%d(%%rbp)" (i)
@@ -26,73 +48,91 @@ let rec compile_expr (e : iexpr) : string =
         "   movzbq %al, %rax\n" ^
         "   push %rax\n"
       end
-  | Ibinop (op, v1, v2) ->
-      let v1_code = compile_expr v1 in
-      let v2_code = compile_expr v2 in
-      begin match op with
-      | Plus -> v1_code ^ v2_code ^
-      "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
-      | Minus ->  v1_code ^ v2_code ^
-        "   pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
-      | Mul ->  v1_code ^ v2_code ^
-        "   pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
-      | Div ->  v1_code ^ v2_code ^
-        "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
-      | Rem ->  v1_code ^ v2_code ^
-        "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
-      | Eq ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
-      | Neq ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
-      | Lt ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setl %al\n   movzb %al, %rax\n   push %rax\n"
-      | Gt ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setg %al\n   movzb %al, %rax\n   push %rax\n"
-      | Le -> 
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setle %al\n   movzb %al, %rax\n   push %rax\n"
-      | Ge ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setge %al\n   movzb %al, %rax\n   push %rax\n"
-      | Eqs ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
-      | Neqs ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
-      | And ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n" ^
-          "   pop %rax\n" ^
-          "   cmp $0, %rax\n" ^
-          "   setne %al\n" ^
-          "   movzbq %al, %rax\n" ^
-          "   cmp $0, %rbx\n" ^
-          "   setne %bl\n" ^
-          "   and %bl, %al\n" ^
-          "   movzbq %al, %rax\n" ^
-          "   push %rax\n"
-
-      | Or ->
-          v1_code ^ v2_code ^
-          "   pop %rbx\n" ^
-          "   pop %rax\n" ^
-          "   cmp $0, %rax\n" ^
-          "   setne %al\n" ^
-          "   movzbq %al, %rax\n" ^
-          "   cmp $0, %rbx\n" ^
-          "   setne %bl\n" ^
-          "   or %bl, %al\n" ^
-          "   movzbq %al, %rax\n" ^
-          "   push %rax\n"
-      end
+      | Ibinop (op, v1, v2) ->
+        begin
+        let v1_code = compile_expr v1 in
+        match op with 
+        | Or -> 
+            begin
+            let label_true = label "or_true" in
+            let label_end  = label "or_end" in
+            v1_code ^
+            "   pop %rax\n" ^
+            "   cmp $0, %rax\n" ^
+            Printf.sprintf "   jne %s\n" label_true ^
+            (compile_expr v2) ^
+            "   pop %rax\n" ^
+            "   cmp $0, %rax\n" ^
+            "   setne %al\n" ^
+            "   movzbq %al, %rax\n" ^
+            Printf.sprintf "   jmp %s\n" label_end ^
+            Printf.sprintf "%s:\n" label_true ^
+            "   mov $1, %rax\n" ^
+            Printf.sprintf "%s:\n" label_end ^
+            "   push %rax\n"
+            end
+        | And ->
+            begin
+            let label_false = label "and_false" in
+            let label_end   = label "and_end" in
+            v1_code ^
+            "   pop %rax\n" ^
+            "   cmp $0, %rax\n" ^
+            Printf.sprintf "   je %s\n" label_false ^
+            (compile_expr v2) ^
+            "   pop %rax\n" ^
+            "   cmp $0, %rax\n" ^
+            "   setne %al\n" ^
+            "   movzbq %al, %rax\n" ^ 
+            Printf.sprintf "   jmp %s\n" label_end ^
+            Printf.sprintf "%s:\n" label_false ^
+            "   mov $0, %rax\n" ^
+            Printf.sprintf "%s:\n" label_end ^
+            "   push %rax\n"
+            end
+        | _ -> begin 
+                let v2_code = compile_expr v2 in
+                match op with
+                | Plus -> v1_code ^ v2_code ^
+                "   pop %rbx\n   pop %rax\n   add %rbx, %rax\n   push %rax\n"
+                | Minus ->  v1_code ^ v2_code ^
+                  "   pop %rbx\n   pop %rax\n   sub %rbx, %rax\n   push %rax\n"
+                | Mul ->  v1_code ^ v2_code ^
+                  "   pop %rbx\n   pop %rax\n   imul %rbx, %rax\n   push %rax\n"
+                | Div ->  v1_code ^ v2_code ^
+                  "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rax\n"
+                | Rem ->  v1_code ^ v2_code ^
+                  "   pop %rbx\n   pop %rax\n   xor %rdx, %rdx\n   idiv %rbx\n   push %rdx\n"
+                | Eq ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
+                | Neq ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
+                | Lt ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setl %al\n   movzb %al, %rax\n   push %rax\n"
+                | Gt ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setg %al\n   movzb %al, %rax\n   push %rax\n"
+                | Le -> 
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setle %al\n   movzb %al, %rax\n   push %rax\n"
+                | Ge ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setge %al\n   movzb %al, %rax\n   push %rax\n"
+                | Eqs ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   sete %al\n   movzb %al, %rax\n   push %rax\n"
+                | Neqs ->
+                    v1_code ^ v2_code ^
+                    "   pop %rbx\n   pop %rax\n   cmp %rbx, %rax\n   setne %al\n   movzb %al, %rax\n   push %rax\n"
+                | _ -> failwith "mauvais opérateur dans fonction compile expr"
+              end
+        end
 
   | Icall (name, args) ->
-      let args_code =
+    let args_code =
         List.rev_map (fun arg ->
           let v_code = compile_expr arg in
           v_code
@@ -109,7 +149,18 @@ let rec compile_expr (e : iexpr) : string =
   | Iprint ->
       "   and $-16, %rsp \n    xor %rax, %rax\n   call printf\n   push %rax\n"
 
-
+(* Pour scanf(&d), qui a besoin de l'adresse de l'argument *)
+and compile_lv_address (pos : pos) : string =
+  match pos with
+  | Ilocal i -> Printf.sprintf "   lea %d(%%rbp), %%rax\n" i
+  | Iglobal s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
+  | GAddr s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
+  | IAddr i -> Printf.sprintf "   lea %d(%%rbp), %%rax\n" i
+  (* Si c'est un pointeur, l'expr est déjà l'adresse *)
+  | Ideref iexpr ->
+      let expr_code = compile_expr iexpr in
+      expr_code ^ "   pop %rax\n"
+  | Ireg s -> failwith ("Ne peut pas prendre l'adresse d'un registre: " ^ s)
 
 and compile_left_value (lv : left_value) : string =
   match lv with
@@ -180,6 +231,26 @@ let compile_ast (ast : iAST) : string =
   | Ijump label ->
       Printf.sprintf "   jmp %s\n" label 
 
+  | Iprintf (format_str, e) ->
+      let format_label = get_string_label format_str in
+      let expr_code = compile_expr e in 
+      expr_code ^
+      "   pop %rsi\n" ^  (* argument 2 *)
+      Printf.sprintf "   lea %s(%%rip), %%rdi\n" format_label ^ (* argument (le format) *)
+      "   xor %rax, %rax\n" ^ 
+      "   and $-16, %rsp\n" ^
+      "   call printf\n"
+  
+  | Iscanf (format_str, (pos, _)) ->
+      let format_label = get_string_label format_str in
+      let addr_code = compile_lv_address pos in (* Met l'adresse dans %rax *)
+      addr_code ^
+      "   mov %rax, %rsi\n" ^ (* argument 2 *)
+      Printf.sprintf "   lea %s(%%rip), %%rdi\n" format_label ^ (* argument 1 (format) *)
+      "   xor %rax, %rax\n" ^ 
+      "   and $-16, %rsp\n" ^ 
+      "   call scanf\n"
+
 
 
 let compile_asts (name : string) (asts : iAST list) : string =
@@ -194,20 +265,33 @@ let compile_program (prog : iprogram) file =
   let print oc s = output_string oc (s ^ "\n") in
   let (cmd, vars) = prog in
 
+
+  (*On doit passer a travers le code avant pour que la table string_labels soit remplie*)
+  let text_section_code =
+    List.map (fun (name, asts) -> compile_asts name asts) cmd
+    |> String.concat "\n"
+  in
+
   print oc ".extern printf";
+  print oc ".extern scanf";
   print oc ".extern malloc";
   print oc ".section .data";
   print oc "    fmt: .string \"%d\\n\"";
-
   List.iter
     (fun (name, size_opt) ->
       match size_opt with
       | Some n -> Printf.fprintf oc "    %s: .space %d\n" name (n * 8)
       | None -> Printf.fprintf oc "    %s: .quad 0\n" name)
-  vars;
+    vars;
+
+  (*Les formats*)
+  print oc "\n.section .rodata";
+  Hashtbl.iter (fun (str_content) (str_label) ->
+      (* On utilise String.escaped pour gérer les \n, \t *)
+      let escaped_str = String.escaped str_content in
+      Printf.fprintf oc "%s:\n    .string \"%s\"\n" str_label escaped_str
+  ) string_labels;
 
   print oc ".section .text";
-  List.iter
-    (fun (name, asts) -> print oc (compile_asts name asts))
-    cmd;
+  print oc text_section_code;
   close_out oc

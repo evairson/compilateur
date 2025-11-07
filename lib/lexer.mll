@@ -20,7 +20,16 @@ rule token = parse
   | '/'     { DIV }
   | "=="    { EQ }
   | '='     { AFFECT }
+  | "&&" { AND }
   | "&"     { ADDRESS }
+  | "||" { OR }
+  | "!=" { NEQ }
+  | "!"  { NOT }
+  | "<=" { LE }
+  | "<"  { LT }
+  | ">=" { GE }
+  | ">"  { GT }
+
 
   | ','     { COMMA }
   | ';'     { SEMI }
@@ -33,24 +42,14 @@ rule token = parse
 
 
   | "print_int" { PRINT }
-
-  | "&&" { AND }
-  | "||" { OR }
-  | "!"  { NOT }
-  | "<"  { LT }
-  | "<=" { LE }
-  | ">"  { GT }
-  | ">=" { GE }
-  | "!=" { NEQ }
-
+  | "scanf" {SCANF}
+  | "printf" {PRINTF}
   | "if"     { IF }
   | "else"   { ELSE }
   | "while"  { WHILE }
   | "return" { RETURN }
-
   | "break"     { BREAK }
   | "continue"  { CONTINUE }
-
   | "int"   { TINT }
 
   | "malloc" { MALLOC }
@@ -58,8 +57,21 @@ rule token = parse
 
   | integer  { CST(int_of_string (lexeme lexbuf)) }
   | ident    { IDENT (lexeme lexbuf) }
+  | '"'     { read_string (Buffer.create 16) lexbuf } 
   | space+   { token lexbuf }
   | eof      { EOF }
 
   | ['\n']            { new_line lexbuf; token lexbuf }
   | [' ' '\t' '\r']+  { token lexbuf }
+
+and read_string buf = parse
+  | '"'       { STRING (Buffer.contents buf) }
+  | '\\'      { escape buf lexbuf }
+  | [^ '"' '\\']+ { Buffer.add_string buf (lexeme lexbuf); read_string buf lexbuf }
+  | eof       { failwith "Chaine de caractere non terminee" }
+
+and escape buf = parse
+  | 'n'  { Buffer.add_char buf '\n'; read_string buf lexbuf }
+  | '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf }
+  | '"'  { Buffer.add_char buf '"' ; read_string buf lexbuf }
+  | _    { failwith ("Sequence d'echappement inconnue: \\" ^ lexeme lexbuf) }

@@ -8,6 +8,8 @@ and iAST = | Ireturn of iexpr
            | Ilabel of string
            | Icondjump of iexpr * string
            | Ijump of string
+           | Iprintf of string * iexpr
+           | Iscanf of string * left_value
 
 and value = | Ileft of left_value | Iconst of int
 
