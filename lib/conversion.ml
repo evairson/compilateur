@@ -141,20 +141,20 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
   
   | ScanfCall (format_str, e, _) ->
       (match e with
-       | Address (name, _) ->
+       | Address (name, _) -> (*On recupere la lv (pos, size) en fonction du nom de variable*)
            let lv =
              if List.mem_assoc name !locals_env then
                List.assoc name !locals_env
              else if List.mem_assoc name !params_env then
                List.assoc name !params_env
              else if List.mem_assoc name globales then
-               (Iglobal name, 64) (* 64 bits = 8 octets *)
+               (Iglobal name, 64) 
              else
                failwith ("Variable non declaree pour scanf: " ^ name)
            in
            [ Iscanf (format_str, lv) ]
        | _ ->
-           failwith "Scanf attend une adresse (ex: &variable)")
+           failwith "Scanf attend une adresse")
       
   | If (cond, then_branch, else_branch, _, _) ->
       let cond_iexpr = expr_to_iexpr cond globales in

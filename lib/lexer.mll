@@ -54,7 +54,7 @@ rule token = parse
 
   | integer  { CST(int_of_string (lexeme lexbuf)) }
   | ident    { IDENT (lexeme lexbuf) }
-  | '"'     { read_string (Buffer.create 16) lexbuf } 
+  | '"'     { read_string (Buffer.create 16) lexbuf } (*detection debut chaine de charactere pour les formats*)
   | space+   { token lexbuf }
   | eof      { EOF }
 

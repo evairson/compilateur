@@ -149,9 +149,9 @@ let rec compile_expr (e : iexpr) : string =
   | Iprint ->
       "   and $-16, %rsp \n    xor %rax, %rax\n   call printf\n   push %rax\n"
 
-(* Pour scanf(&d), qui a besoin de l'adresse de l'argument *)
+(*pour scanf, on gere l'adresse passee en argument*)
 and compile_lv_address (pos : pos) : string =
-  match pos with
+  match pos with (* On adapte en fonction de l'argument passe *)
   | Ilocal i -> Printf.sprintf "   lea %d(%%rbp), %%rax\n" i
   | Iglobal s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
   | GAddr s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
@@ -236,14 +236,14 @@ let compile_ast (ast : iAST) : string =
       let expr_code = compile_expr e in 
       expr_code ^
       "   pop %rsi\n" ^  (* argument 2 *)
-      Printf.sprintf "   lea %s(%%rip), %%rdi\n" format_label ^ (* argument (le format) *)
+      Printf.sprintf "   lea %s(%%rip), %%rdi\n" format_label ^ (* argument 1 (format) *)
       "   xor %rax, %rax\n" ^ 
       "   and $-16, %rsp\n" ^
       "   call printf\n"
   
   | Iscanf (format_str, (pos, _)) ->
       let format_label = get_string_label format_str in
-      let addr_code = compile_lv_address pos in (* Met l'adresse dans %rax *)
+      let addr_code = compile_lv_address pos in (* met l'adresse dans %rax *)
       addr_code ^
       "   mov %rax, %rsi\n" ^ (* argument 2 *)
       Printf.sprintf "   lea %s(%%rip), %%rdi\n" format_label ^ (* argument 1 (format) *)
@@ -284,10 +284,10 @@ let compile_program (prog : iprogram) file =
       | None -> Printf.fprintf oc "    %s: .quad 0\n" name)
     vars;
 
-  (*Les formats*)
+  (*les formats*)
   print oc "\n.section .rodata";
   Hashtbl.iter (fun (str_content) (str_label) ->
-      (* On utilise String.escaped pour gérer les \n, \t *)
+      (* On utilise String.escaped pour gérer les \n*)
       let escaped_str = String.escaped str_content in
       Printf.fprintf oc "%s:\n    .string \"%s\"\n" str_label escaped_str
   ) string_labels;
