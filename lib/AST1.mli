@@ -2,7 +2,7 @@ type ppos = Lexing.position
 
 type unop  = Opp  | Not
 type binop = Plus | Minus | Mul | Div | Rem | Lt  | Le | Gt | Ge | Eq | Neq | And | Or | Eqs | Neqs
-
+type var_type = Int | Ptr
 
 type expr =
   | Cst    of int * ppos
@@ -40,7 +40,7 @@ type  stmt =
 
 and seq = stmt list
 
-type params = string list
+type params = (string * var_type) list
 
 type gdef =
   | Function of string * params * seq * ppos

@@ -1,8 +1,12 @@
 open AST1
 open AST2
 
+
+
 let locals_env : (string * left_value) list ref = ref []
 let params_env : (string * left_value) list ref = ref []
+
+let vars_type : (string * var_type) list ref = ref []
 
 let offset_counter = ref 0
 
@@ -35,7 +39,30 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr
   | Binop (op, e1, e2, _) ->
       let v1 = expr_to_iexpr e1 globales in
       let v2 = expr_to_iexpr e2 globales in
-      Ibinop (op, v1, v2)
+      (match v1, v2 with
+      | Ivalue (Ileft (Iglobal name, _)), _ ->
+          (if List.mem_assoc name !vars_type then
+            let typ = List.assoc name !vars_type in
+            (match typ with
+            | Ptr when (op = Plus || op = Minus) ->
+                let size = 8 in
+                let scaled_v2 = Ibinop (Mul, v2, Ivalue (Iconst size)) in
+                Ibinop (op, v1, scaled_v2)
+            | _ -> Ibinop (op, v1, v2))
+          else
+            Ibinop (op, v1, v2))
+      | _, Ivalue (Ileft (Iglobal name, _)) ->
+          (if List.mem_assoc name !vars_type then
+            let typ = List.assoc name !vars_type in
+            (match typ with
+            | Ptr when (op = Plus || op = Minus) ->
+                let size = 8 in
+                let scaled_v1 = Ibinop (Mul, v1, Ivalue (Iconst size)) in
+                Ibinop (op, scaled_v1, v2)
+            | _ -> Ibinop (op, v1, v2))
+          else
+            Ibinop (op, v1, v2))
+      | _ -> Ibinop (op, v1, v2))
 
   | Unop (op, e1, _) ->
       let v1 = expr_to_iexpr e1 globales in
@@ -133,11 +160,13 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST l
   
   | Lvar (name, _) -> let pos = (Ilocal (get_offset ()), 64) in
       locals_env := (name, pos) :: !locals_env;
+      vars_type := (name, Int) :: !vars_type;
       [ Iassign (pos, Ivalue (Iconst 0)) ]
 
   | Lvar_affect (name, expr, _) -> let v = expr_to_iexpr expr globales in
       let pos = (Ilocal (get_offset ()), 64) in
       locals_env := (name, pos) :: !locals_env;
+      vars_type := (name, Int) :: !vars_type;
       [ Iassign (pos, v) ]
 
   | Pvar_affect (expr_p, expr, _) -> let v = expr_to_iexpr expr globales in
@@ -250,24 +279,31 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST l
 let recupere_globals (p : program) : (string * int option) list =
   List.fold_left (fun acc g ->
     match g with
-    | Gvar (name, _) -> (name, None) :: acc
+    | Gvar (name, _) -> 
+      vars_type := (name, Int) :: !vars_type;
+      (name, None) :: acc
     | Garray (name, size_expr, _) ->
         let size =
           match size_expr with
           | Cst (n, _) -> n
           | _ -> failwith "La taille du tableau doit être une constante"
         in
+        vars_type := (name, Ptr) :: !vars_type;
         (name, Some size) :: acc
-    | Gptr (name, _) -> (name, None) :: acc
+    | Gptr (name, _) -> 
+        vars_type := (name, Ptr) :: !vars_type;
+      (name, None) :: acc
     | _ -> acc
   ) [] p
 
-let init_params (params : string list) : unit =
+let init_params (params : (string * var_type) list) : unit =
   params_env := [];
-  List.iteri (fun i (name) ->
+  List.iteri (fun i (name, typ) ->
     let pos = (Ilocal (16 + i * 8), 64) in
-    params_env := (name, pos) :: !params_env
+    params_env := (name, pos) :: !params_env;
+    vars_type := (name, typ) :: !vars_type;
   ) params
+
 
 let program1_to_iprogram (p : program) : iprogram =
   print_endline "Conversion en iAST...";

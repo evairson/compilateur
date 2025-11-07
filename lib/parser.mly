@@ -65,10 +65,10 @@ list_gdef :
 ;
 
 params :
-  | TINT id=IDENT { [id] }
-  | TINT STAR id=IDENT { [id] }
-  | p=params COMMA TINT id=IDENT { p @ [id] }
-  | p=params COMMA TINT STAR id=IDENT { p @ [id] }
+  | TINT id=IDENT { [(id, Int)] }
+  | TINT STAR id=IDENT { [(id, Ptr)] }
+  | p=params COMMA TINT id=IDENT { p @ [(id, Int)] }
+  | p=params COMMA TINT STAR id=IDENT { p @ [(id, Ptr)] }
 
 gdef:
   

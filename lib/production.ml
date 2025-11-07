@@ -154,7 +154,7 @@ and compile_lv_address (pos : pos) : string =
   match pos with
   | Ilocal i -> Printf.sprintf "   lea %d(%%rbp), %%rax\n" i
   | Iglobal s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
-  | GAddr s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
+  | IAddrG s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
   | IAddr i -> Printf.sprintf "   lea %d(%%rbp), %%rax\n" i
   (* Si c'est un pointeur, l'expr est déjà l'adresse *)
   | Ideref iexpr ->
