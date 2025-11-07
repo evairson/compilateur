@@ -27,15 +27,9 @@ let get_jump_number () : int =
 let breaks: string list ref = ref []
 let continues: string list ref = ref []
 
-let mem_assoc3 key lst =
-  List.exists (fun (k, _, _) -> k = key) lst
-
-let assoc3 key lst =
-  let (_, v, b) = List.find (fun (k, _, _) -> k = key) lst in
-  (v, b)
 
 
-let rec expr_to_iexpr (e : expr) (globales : (string * int option * bool) list) : iexpr = 
+let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr = 
    match e with
   | Cst (n, _) -> Ivalue (Iconst n)
   | Binop (op, e1, e2, _) ->
@@ -56,9 +50,8 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option * bool) list) 
         let pos = List.assoc name !params_env in
         Ivalue (Ileft pos)
 
-      else if mem_assoc3 name globales then
-        let (_, is_ptr) = assoc3 name globales in
-        Ivalue (Ileft ((if is_ptr then IAddrG name else Iglobal name), 64))
+      else if List.mem_assoc name globales then
+        Ivalue (Ileft (Iglobal name, 64))
       
       else
         failwith ("Variable non declaree1: " ^ name)
@@ -73,9 +66,8 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option * bool) list) 
       | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
       | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
 
-    else if mem_assoc3 name globales then
-      let (_, is_ptr) = assoc3 name globales in
-      Ivalue (Ileft ((if is_ptr then (IAddrG name) else (Iglobal name)), 64))
+    else if List.mem_assoc name globales then
+      Ivalue (Ileft (IAddrG name, 64))
     else
       failwith ("Variable non déclarée: " ^ name)
 
@@ -91,7 +83,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option * bool) list) 
         match pos with
           | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
           | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
-      else if mem_assoc3 name globales then
+      else if List.mem_assoc name globales then
         Ivalue (Ileft (IAddrG name, 64))
       else
         failwith ("Tableau non déclaré : " ^ name)
@@ -113,7 +105,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option * bool) list) 
     Icall ("malloc", [size_iexpr])
 
   (*renvoie une liste de iAST*)
-let rec stmt_to_iAST (s : stmt) (globales : (string * int option * bool) list) : iAST list =
+let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST list =
   match s with
   | Print (e, _) -> let v = expr_to_iexpr e globales in
       [ Iassign ((Ireg "rsi", 64), v); 
@@ -134,9 +126,8 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option * bool) list) :
         let pos = List.assoc name !params_env in
         [ Iassign (pos, v) ]
 
-      else if mem_assoc3 name globales then
-          let (_, is_ptr) = assoc3 name globales in
-          [ Iassign (((if is_ptr then (IAddrG name) else (Iglobal name)), 64), v) ]
+      else if List.mem_assoc name globales then
+          [ Iassign (((Iglobal name), 64), v) ]
       else
         failwith ("Variable non declaree2: " ^ name)
   
@@ -187,7 +178,7 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option * bool) list) :
         match pos with
         | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
         | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
-      else if mem_assoc3 name globales then
+      else if List.mem_assoc name globales then
         Ivalue (Ileft (IAddrG name, 64))
       else
         failwith ("Tableau non déclaré : " ^ name)
@@ -234,18 +225,18 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option * bool) list) :
       [ Ijump label ]
 
 (*On doit passer une premiere fois pour recuperer les variables globales*)
-let recupere_globals (p : program) : (string * int option * bool) list =
+let recupere_globals (p : program) : (string * int option) list =
   List.fold_left (fun acc g ->
     match g with
-    | Gvar (name, _) -> (name, None, false) :: acc
+    | Gvar (name, _) -> (name, None) :: acc
     | Garray (name, size_expr, _) ->
         let size =
           match size_expr with
           | Cst (n, _) -> n
           | _ -> failwith "La taille du tableau doit être une constante"
         in
-        (name, Some size, false) :: acc
-    | Gptr (name, _) -> (name, None, true) :: acc
+        (name, Some size) :: acc
+    | Gptr (name, _) -> (name, None) :: acc
     | _ -> acc
   ) [] p
 
@@ -272,5 +263,5 @@ let program1_to_iprogram (p : program) : iprogram =
     
     | _ -> acc
   ) [] p in
-  (List.rev functions, List.map (fun (a, b, _) -> (a, b)) (List.rev symboles))
+  (List.rev functions, List.rev symboles)
 
