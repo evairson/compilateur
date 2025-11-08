@@ -52,6 +52,9 @@ rule token = parse
   | "continue"  { CONTINUE }
   | "int"   { TINT }
 
+  | "malloc" { MALLOC }
+  | "sizeof" { SIZEOF }
+
   | integer  { CST(int_of_string (lexeme lexbuf)) }
   | ident    { IDENT (lexeme lexbuf) }
   | '"'     { read_string (Buffer.create 16) lexbuf } (*detection debut chaine de charactere pour les formats*)

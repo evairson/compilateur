@@ -2,7 +2,7 @@ type ppos = Lexing.position
 
 type unop  = Opp  | Not
 type binop = Plus | Minus | Mul | Div | Rem | Lt  | Le | Gt | Ge | Eq | Neq | And | Or | Eqs | Neqs
-
+type var_type = Int | Ptr
 
 type expr =
   | Cst    of int * ppos
@@ -13,7 +13,8 @@ type expr =
   | Address of string * ppos
   | Deref of expr * ppos
   | Array_get of string * expr * ppos
-
+  | Malloc of expr * ppos
+  | Sizeof of string * ppos
 
 type  stmt =
     | Print of expr*ppos
@@ -39,12 +40,13 @@ type  stmt =
 
 and seq = stmt list
 
-type params = string list
+type params = (string * var_type) list
 
 type gdef =
   | Function of string * params * seq * ppos
   | Gvar of string * ppos
   | Gvar_affect of string * expr * ppos
   | Garray of string * expr * ppos
+  | Gptr of string * ppos
 
 type program = gdef list

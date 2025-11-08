@@ -30,7 +30,7 @@ let compile_pos (p : pos) : string =
   | Ireg s -> Printf.sprintf "%%%s" s
   | Ideref _ -> failwith "Cannot compile Ideref position directly"
   | IAddr i -> Printf.sprintf "%d(%%rbp)" (i)
-  | GAddr s -> Printf.sprintf "%s(%%rip)" s
+  | IAddrG s -> Printf.sprintf "%s(%%rip)" s
 
   
 let rec compile_expr (e : iexpr) : string =
@@ -154,7 +154,7 @@ and compile_lv_address (pos : pos) : string =
   match pos with (* On adapte en fonction de l'argument passe *)
   | Ilocal i -> Printf.sprintf "   lea %d(%%rbp), %%rax\n" i
   | Iglobal s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
-  | GAddr s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
+  | IAddrG s -> Printf.sprintf "   lea %s(%%rip), %%rax\n" s
   | IAddr i -> Printf.sprintf "   lea %d(%%rbp), %%rax\n" i
   (* Si c'est un pointeur, l'expr est déjà l'adresse *)
   | Ideref iexpr ->
@@ -187,7 +187,7 @@ and  compile_ivalue (v : value) : string =
        match pos with
        | Iglobal "fmt" ->Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
        | IAddr _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
-       | GAddr _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
+       | IAddrG _ -> Printf.sprintf "   lea %s, %%rax\n   push %%rax\n" (compile_pos pos)
        | _  -> compile_left_value (pos, size)
       
 
@@ -265,6 +265,7 @@ let compile_program (prog : iprogram) file =
   let print oc s = output_string oc (s ^ "\n") in
   let (cmd, vars) = prog in
 
+
   (*On doit passer a travers le code avant pour que la table string_labels soit remplie*)
   let text_section_code =
     List.map (fun (name, asts) -> compile_asts name asts) cmd
@@ -273,9 +274,8 @@ let compile_program (prog : iprogram) file =
 
   print oc ".extern printf";
   print oc ".extern scanf";
-
-  (*les globales*)
-  print oc "\n.section .data";
+  print oc ".extern malloc";
+  print oc ".section .data";
   print oc "    fmt: .string \"%d\\n\"";
   List.iter
     (fun (name, size_opt) ->
