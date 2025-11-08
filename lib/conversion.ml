@@ -1,8 +1,12 @@
 open AST1
 open AST2
 
+
+
 let locals_env : (string * left_value) list ref = ref []
 let params_env : (string * left_value) list ref = ref []
+
+let vars_type : (string * var_type) list ref = ref []
 
 let offset_counter = ref 0
 
@@ -47,13 +51,29 @@ let breaks: string list ref = ref []
 let continues: string list ref = ref []
 
 
-let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexpr = 
+
+let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr = 
    match e with
   | Cst (n, _) -> Ivalue (Iconst n)
-  | Binop (op, e1, e2, _) ->
-      let v1 = expr_to_iexpr e1 globales in
-      let v2 = expr_to_iexpr e2 globales in
-      Ibinop (op, v1, v2)
+    | Binop (op, e1, e2, _) ->
+      (match e1 with 
+      | Var (name, _) when List.mem_assoc name !vars_type ->
+          let typ = List.assoc name !vars_type in
+          (match typ with
+          | Ptr when (op = Plus || op = Minus) ->
+              let v1 = expr_to_iexpr e1 globales in
+              let v2 = expr_to_iexpr e2 globales in
+              let size = 8 in
+              let scaled_v2 = Ibinop (Mul, v2, Ivalue (Iconst size)) in
+              Ibinop (op, v1, scaled_v2)
+          | _ ->
+              let v1 = expr_to_iexpr e1 globales in
+              let v2 = expr_to_iexpr e2 globales in
+              Ibinop (op, v1, v2))
+      | _ ->
+          let v1 = expr_to_iexpr e1 globales in
+          let v2 = expr_to_iexpr e2 globales in
+          Ibinop (op, v1, v2))
 
   | Unop (op, e1, _) ->
       let v1 = expr_to_iexpr e1 globales in
@@ -69,7 +89,13 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
         Ivalue (Ileft pos)
 
       else if List.mem_assoc name globales then
-        Ivalue (Ileft (Iglobal name, 64))
+        if List.mem_assoc name !vars_type then
+          let typ = List.assoc name !vars_type in
+          (match typ with
+          | Ptr -> Ivalue (Ileft (IAddrG name, 64))
+          | Int -> Ivalue (Ileft (Iglobal name, 64)))
+        else
+          Ivalue (Ileft (Iglobal name, 64))
       
       else
         failwith ("Variable non declaree1: " ^ name)
@@ -85,7 +111,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
       | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
 
     else if List.mem_assoc name globales then
-      Ivalue (Ileft (Iglobal name, 64))
+      Ivalue (Ileft (IAddrG name, 64))
     else
       failwith ("Variable non déclarée: " ^ name)
 
@@ -103,7 +129,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
           | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
           | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
       else if List.mem_assoc name globales then
-        Ivalue (Ileft (GAddr name, 64))
+        Ivalue (Ileft (IAddrG name, 64))
       else
         failwith ("Tableau non déclaré : " ^ name)
     in
@@ -111,8 +137,20 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option ) list) : iexp
     let addr = adresse_tableau base indices name in
     Ivalue (Ileft (Ideref addr, 64))
 
+  | Sizeof (tname, _) ->
+    let size =
+      match tname with
+      | "int" | "int*" -> 8
+      | _ -> failwith ("sizeof: type inconnu " ^ tname)
+    in
+    Ivalue (Iconst size)
+
+  | Malloc (size_expr, _) ->
+    let size_iexpr = expr_to_iexpr size_expr globales in
+    Icall ("malloc", [size_iexpr])
+
   (*renvoie une liste de iAST*)
-let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST list =
+let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST list =
   match s with
   | Print (e, _) -> let v = expr_to_iexpr e globales in
       [ Iassign ((Ireg "rsi", 64), v); 
@@ -134,17 +172,19 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
         [ Iassign (pos, v) ]
 
       else if List.mem_assoc name globales then
-          [Iassign ((Iglobal name, 64), v)]
+          [ Iassign (((Iglobal name), 64), v) ]
       else
         failwith ("Variable non declaree2: " ^ name)
   
   | Lvar (name, _) -> let pos = (Ilocal (get_offset ()), 64) in
       locals_env := (name, pos) :: !locals_env;
+      vars_type := (name, Int) :: !vars_type;
       [ Iassign (pos, Ivalue (Iconst 0)) ]
 
   | Lvar_affect (name, expr, _) -> let v = expr_to_iexpr expr globales in
       let pos = (Ilocal (get_offset ()), 64) in
       locals_env := (name, pos) :: !locals_env;
+      vars_type := (name, Int) :: !vars_type;
       [ Iassign (pos, v) ]
 
   | Pvar_affect (expr_p, expr, _) -> let v = expr_to_iexpr expr globales in
@@ -154,8 +194,28 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
 
   | SCall (name, args, _, _) ->
       [ Ival (Icall (name, List.map (fun arg -> expr_to_iexpr arg globales) args)) ]
+  
+  | PrintfCall (format_str, e, _) ->
+      let ie = expr_to_iexpr e globales in
+      [ Iprintf (format_str, ie) ]
+  
+  | ScanfCall (format_str, e, _) ->
+      (match e with
+       | Address (name, _) -> (*On recupere la lv (pos, size) en fonction du nom de variable*)
+           let lv =
+             if List.mem_assoc name !locals_env then
+               List.assoc name !locals_env
+             else if List.mem_assoc name !params_env then
+               List.assoc name !params_env
+             else if List.mem_assoc name globales then
+               (Iglobal name, 64) 
+             else
+               failwith ("Variable non declaree pour scanf: " ^ name)
+           in
+           [ Iscanf (format_str, lv) ]
+       | _ ->
+           failwith "Scanf attend une adresse")
       
-
   | If (cond, then_branch, else_branch, _, _) ->
       let cond_iexpr = expr_to_iexpr cond globales in
       let then_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales) then_branch) in
@@ -187,7 +247,7 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
         | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
         | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
       else if List.mem_assoc name globales then
-        Ivalue (Ileft (GAddr name, 64))
+        Ivalue (Ileft (IAddrG name, 64))
       else
         failwith ("Tableau non déclaré : " ^ name)
     in
@@ -231,12 +291,16 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option ) list) : iAST 
     else
       let label = List.hd !continues in
       [ Ijump label ]
+  
+
 
 (*On doit passer une premiere fois pour recuperer les variables globales*)
 let recupere_globals (p : program) : (string * int option) list =
   List.fold_left (fun acc g ->
     match g with
-    | Gvar (name, _) -> (name, None) :: acc
+    | Gvar (name, _) -> 
+      vars_type := (name, Int) :: !vars_type;
+      (name, None) :: acc
     | Garray (name, sizes_expr, _) ->
         let dims = List.map (fun e->match e with
                               | Cst (n, _) -> n
@@ -246,15 +310,20 @@ let recupere_globals (p : program) : (string * int option) list =
         in
         array_dims := (name, dims) :: !array_dims;
         (name, None)::acc
+    | Gptr (name, _) -> 
+        vars_type := (name, Ptr) :: !vars_type;
+      (name, None) :: acc
     | _ -> acc
   ) [] p
 
-let init_params (params : string list) : unit =
+let init_params (params : (string * var_type) list) : unit =
   params_env := [];
-  List.iteri (fun i (name) ->
+  List.iteri (fun i (name, typ) ->
     let pos = (Ilocal (16 + i * 8), 64) in
-    params_env := (name, pos) :: !params_env
+    params_env := (name, pos) :: !params_env;
+    vars_type := (name, typ) :: !vars_type;
   ) params
+
 
 let program1_to_iprogram (p : program) : iprogram =
   print_endline "Conversion en iAST...";
@@ -269,6 +338,8 @@ let program1_to_iprogram (p : program) : iprogram =
         (let body = List.flatten (List.map (fun s -> stmt_to_iAST s symboles) stmts) in
  (*on garde les globales pour recuperer les valeurs dans la suite*)
         (name, body) :: acc)
+    
     | _ -> acc
   ) [] p in
   (List.rev functions, List.rev symboles)
+
