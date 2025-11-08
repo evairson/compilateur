@@ -255,8 +255,15 @@ let compile_ast (ast : iAST) : string =
 
 let compile_asts (name : string) (asts : iAST list) : string =
   (*let header = Printf.sprintf ".global %s \n %s:\n   and $-16, %%rsp\n" name name in*)
-    let header = Printf.sprintf ".global %s \n %s:\n    push %%rbp\n     mov %%rsp, %%rbp\n    sub $64, %%rsp\n" name name in
-  let body = List.fold_left (fun acc ast -> acc ^ (compile_ast ast)) "" asts in
+  let header = Printf.sprintf ".global %s \n %s:\n    push %%rbp\n     mov %%rsp, %%rbp\n    sub $64, %%rsp\n" name name in
+  
+  (* vérifie si la fonction a un return et si elle en a pas elle rajoute return 0*)
+  let asts_return =
+  match List.rev asts with
+  | Ireturn _ :: _ -> asts
+  | _ -> asts @ [Ireturn (Ivalue (Iconst 0))]
+  in
+    let body = List.fold_left (fun acc ast -> acc ^ (compile_ast ast)) "" asts_return in
   header ^ body
 
 
