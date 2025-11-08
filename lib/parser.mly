@@ -79,8 +79,9 @@ gdef:
   | TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
   | TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
   | id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
+  | TINT id=IDENT taille=taille_ou_pos SEMI { Garray(id, taille, snd $loc) }
   | TINT STAR id=IDENT SEMI { Gptr(id, snd $loc) }
-  | TINT id=IDENT LB e=expr RB SEMI { Garray(id, e, snd $loc) }
+
 
 ;
 
@@ -100,10 +101,14 @@ expr:
 | STAR LP id=IDENT PLUS e=expr RP { Deref(Binop(Plus, Var(id,snd $loc), e, snd $loc), snd $loc) }
 | STAR LP id=IDENT MINUS e=expr RP { Deref(Binop(Minus, Var(id,snd $loc), e, snd $loc), snd $loc) }
 | ADDRESS id=IDENT { Address(id, snd $loc) }
-| id=IDENT LB e=expr RB { Array_get (id, e, snd $loc) }
+| id=IDENT pos=taille_ou_pos { Array_get (id, pos, snd $loc) }
+
+// | LB args=arg_list RB { Array(args,snd $loc) }
+
 | MALLOC LP e=expr RP { Malloc(e, snd $loc) }
 | SIZEOF LP TINT RP { Sizeof("int", snd $loc) }
 | SIZEOF LP TINT STAR RP { Sizeof("int*", snd $loc) }
+
 
 ;
 
@@ -111,7 +116,12 @@ arg_list:
   |e=expr {[e]}
   |l=arg_list COMMA e=expr {l@[e]}
 
-// ;
+;
+
+taille_ou_pos : 
+  | LB e=expr RB { [e] }
+  | l=taille_ou_pos LB e=expr RB {l@[e]}
+
 
 stmt:
 | PRINT LP e = expr RP SEMI { Print(e,snd $loc) }
@@ -127,7 +137,6 @@ stmt:
 | STAR LP id=IDENT MINUS e1=expr RP AFFECT e2=expr SEMI { Pvar_affect(Binop(Minus, Var(id,snd $loc), e1, snd $loc), e2, snd $loc)}
 | IF LP e = expr RP BEGIN s=seq END { If(e,s,None,fst $loc, snd $loc)}
 | IF LP e = expr RP BEGIN s1=seq END ELSE BEGIN s2=seq END { If(e,s1,Some s2,fst $loc, snd $loc)}
-| id=IDENT LB e1=expr RB AFFECT e2=expr SEMI { Array_affect(id, e1, e2, snd $loc) }
 | WHILE LP e=expr RP BEGIN s=seq END {While(e,s,fst $loc,snd $loc)}
 
 | BREAK SEMI {Break(snd $loc)}
@@ -142,6 +151,7 @@ stmt:
 // | STAR id=IDENT AFFECT e=expr SEMI {Var_affect_p(id, e, snd $loc)}
 // | TINT STAR id=IDENT AFFECT e=expr SEMI { Lvar_affect_p(id, e, snd $loc) }
 
+| id=IDENT pos=taille_ou_pos AFFECT e=expr SEMI { Array_affect(id, pos, e, snd $loc) }
 
 ;
 

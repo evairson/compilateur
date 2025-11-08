@@ -27,6 +27,25 @@ let get_jump_number () : int =
   jump_number := j + 1;
   j
 
+let array_dims : (string * int list) list ref = ref []
+
+let adresse_tableau base indices name =
+  let d = List.assoc name !array_dims in
+  let rec tab_offset dimensions indices =
+    match dimensions,indices with
+    | [], [] -> Ivalue (Iconst 0)
+    | _::dims, i::ids ->
+        let pas = List.fold_left (fun acc d -> acc * d) 1 dims in
+        let offset_i = Ibinop (Mul,i,Ivalue(Iconst(pas*8)))
+        in
+        Ibinop (Plus, offset_i, tab_offset dims ids)
+    | _ ->
+        failwith "la dimension ne correspond pas"
+  in
+  let offset = tab_offset d indices in
+  Ibinop (Plus,base,offset)
+
+
 (*on garde en memoire les debuts et fin de boucles afin de gerer les break et continue*)
 let breaks: string list ref = ref []
 let continues: string list ref = ref []
@@ -100,8 +119,9 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr
       let ptr = expr_to_iexpr e globales in
       Ivalue (Ileft (Ideref ptr, 64))
 
-  | Array_get (name, index_expr, _) ->
-    let index = expr_to_iexpr index_expr globales in
+  | Array_get (name, index_list, _) ->
+    let indices = List.map (fun e -> expr_to_iexpr e globales) index_list in
+    
     let base =
       if List.mem_assoc name !locals_env then
         let (pos, _) = List.assoc name !locals_env in
@@ -113,8 +133,8 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr
       else
         failwith ("Tableau non déclaré : " ^ name)
     in
-    (* adresse = base + index * 8 *)
-    let addr = Ibinop (Plus, base, Ibinop (Mul, index, Ivalue (Iconst 8))) in
+    
+    let addr = adresse_tableau base indices name in
     Ivalue (Ileft (Ideref addr, 64))
 
   | Sizeof (tname, _) ->
@@ -216,8 +236,9 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST l
       ] in
       iasts
 
-  | Array_affect (name, index_expr, value_expr, _) ->
-    let index = expr_to_iexpr index_expr globales in
+  | Array_affect (name, index_list, value_expr, _) ->
+    let indices = List.map (fun e -> expr_to_iexpr e globales) index_list in
+
     let value = expr_to_iexpr value_expr globales in
     let base =
       if List.mem_assoc name !locals_env then
@@ -230,7 +251,7 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST l
       else
         failwith ("Tableau non déclaré : " ^ name)
     in
-    let addr = Ibinop (Plus, base, Ibinop (Mul, index, Ivalue (Iconst 8))) in
+    let addr = adresse_tableau base indices name in
     [ Iassign ((Ideref addr, 64), value) ]
 
   | While (cond, contenu, _, _)->
@@ -280,14 +301,15 @@ let recupere_globals (p : program) : (string * int option) list =
     | Gvar (name, _) -> 
       vars_type := (name, Int) :: !vars_type;
       (name, None) :: acc
-    | Garray (name, size_expr, _) ->
-        let size =
-          match size_expr with
-          | Cst (n, _) -> n
-          | _ -> failwith "La taille du tableau doit être une constante"
+    | Garray (name, sizes_expr, _) ->
+        let dims = List.map (fun e->match e with
+                              | Cst (n, _) -> n
+                              | _ -> failwith "La taille du tableau doit être une constante"
+
+                            ) sizes_expr
         in
-        vars_type := (name, Ptr) :: !vars_type;
-        (name, Some size) :: acc
+        array_dims := (name, dims) :: !array_dims;
+        (name, None)::acc
     | Gptr (name, _) -> 
         vars_type := (name, Ptr) :: !vars_type;
       (name, None) :: acc

@@ -44,6 +44,7 @@ rule token = parse
   | "print_int" { PRINT }
   | "scanf" {SCANF}
   | "printf" {PRINTF}
+
   | "if"     { IF }
   | "else"   { ELSE }
   | "while"  { WHILE }
