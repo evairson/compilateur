@@ -37,11 +37,12 @@ rule token = parse
   | "&&" { AND }
   | "||" { OR }
   | "!"  { NOT }
-  | "<"  { LT }
   | "<=" { LE }
-  | ">"  { GT }
+  | "<"  { LT }
   | ">=" { GE }
+  | ">"  { GT }
   | "!=" { NEQ }
+  | "!" {NOT}
 
   | "if"     { IF }
   | "else"   { ELSE }
