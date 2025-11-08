@@ -50,36 +50,47 @@ let adresse_tableau base indices name =
 let breaks: string list ref = ref []
 let continues: string list ref = ref []
 
+(*Pour verifier les types des fonctions*)
+type fun_types = var_type * (var_type list) (* type_retour * list_types_params *)
 
-
-let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr = 
+let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab : (string * fun_types) list) : (iexpr * var_type) = 
    match e with
-  | Cst (n, _) -> Ivalue (Iconst n)
-    | Binop (op, e1, e2, _) ->
-      (match e1 with 
-      | Var (name, _) when List.mem_assoc name !vars_type ->
-          let typ = List.assoc name !vars_type in
-          (match typ with
-          | Ptr when (op = Plus || op = Minus) ->
-              let v1 = expr_to_iexpr e1 globales in
-              let v2 = expr_to_iexpr e2 globales in
-              let size = 8 in
-              let scaled_v2 = Ibinop (Mul, v2, Ivalue (Iconst size)) in
-              Ibinop (op, v1, scaled_v2)
-          | _ ->
-              let v1 = expr_to_iexpr e1 globales in
-              let v2 = expr_to_iexpr e2 globales in
-              Ibinop (op, v1, v2))
-      | _ ->
-          let v1 = expr_to_iexpr e1 globales in
-          let v2 = expr_to_iexpr e2 globales in
-          Ibinop (op, v1, v2))
+  | Cst (n, _) -> (Ivalue (Iconst n), Int)
+
+  | Binop (op, e1, e2, _) ->
+
+    let (v1, t1) = expr_to_iexpr e1 globales funtab in
+    let (v2, t2) = expr_to_iexpr e2 globales funtab in
+
+    (match (op, t1, t2) with
+      | ((Plus | Minus), Ptr, Int) ->
+          let scaled_v2 = Ibinop (Mul, v2, Ivalue (Iconst 8)) in
+          (Ibinop (op, v1, scaled_v2), Ptr) 
+
+      | (Plus, Int, Ptr) -> 
+          let scaled_v1 = Ibinop (Mul, v1, Ivalue (Iconst 8)) in
+          (Ibinop (op, scaled_v1, v2), Ptr)
+
+      | (_, Int, Int) -> (*operations entiers*)
+          (Ibinop (op, v1, v2), Int) 
+          
+      | _ -> 
+          failwith "Erreur de type: operation binaire non supportee entre ces deux types") (*on choisi de pas gerer les autres cas*)
 
   | Unop (op, e1, _) ->
-      let v1 = expr_to_iexpr e1 globales in
-      Iunop (op, v1)
+      let (v1, t1) = expr_to_iexpr e1 globales funtab in
+      if t1 <> Int then
+        failwith "Erreur de type: Opérateur unaire sur un non-entier"
+      ;
+      (Iunop (op, v1), Int)
 
   | Var (name, _) ->
+    let typ = 
+        try List.assoc name !vars_type 
+        with Not_found -> failwith ("Type inconnu pour cette variable : " ^ name)
+    in
+
+    let e_iexpr = 
       if List.mem_assoc name !locals_env then
         let pos = List.assoc name !locals_env in
         Ivalue (Ileft pos)
@@ -99,29 +110,61 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr
       
       else
         failwith ("Variable non declaree1: " ^ name)
+    in
+    (e_iexpr, typ)
   
   | Call (name, args, _, _) ->
-      Icall (name, List.map (fun arg -> expr_to_iexpr arg globales) args)
+    let (return_type, param_types) =
+        try List.assoc name funtab
+        with Not_found -> failwith ("Fonction non déclaree: " ^ name)
+      in
+      
+      if List.length args <> List.length param_types then
+        failwith ("Erreur: Mauvais nombre d'arguments pour " ^ name)
+      ;
+      
+      let i_args = List.map2 (fun arg expected_type ->
+        let (i_arg, arg_type) = expr_to_iexpr arg globales funtab in
+        if arg_type <> expected_type then
+          failwith "Erreur de type: Mauvais type d'argument"
+        ;
+        i_arg
+      ) args param_types in
+      
+      (Icall (name, i_args), return_type)
 
   | Address (name, _) -> (* &x → address of x *)
-    if List.mem_assoc name !locals_env then
-      let (pos, _) = List.assoc name !locals_env in
-      match pos with
-      | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
-      | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
+    let e_iexpr = 
+      if List.mem_assoc name !locals_env then
+        let (pos, _) = List.assoc name !locals_env in
+        match pos with
+        | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
+        | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
 
-    else if List.mem_assoc name globales then
-      Ivalue (Ileft (IAddrG name, 64))
-    else
-      failwith ("Variable non déclarée: " ^ name)
+      else if List.mem_assoc name globales then
+        Ivalue (Ileft (IAddrG name, 64))
+      else
+        failwith ("Variable non déclarée: " ^ name)
+    in
+    (e_iexpr, Ptr) (*toujour pointeur*)
 
   | Deref (e, _) -> (* *ptr → value at address ptr *)
-      let ptr = expr_to_iexpr e globales in
-      Ivalue (Ileft (Ideref ptr, 64))
+      let (i_ptr, typ) = expr_to_iexpr e globales funtab in
+      if typ <> Ptr then
+        failwith "Erreur de type: Déréférencement d'un non-pointeur"
+      ;
+      (Ivalue (Ileft (Ideref i_ptr, 64)), Int) (*on pointe par defaut vers un int*)
 
   | Array_get (name, index_list, _) ->
-    let indices = List.map (fun e -> expr_to_iexpr e globales) index_list in
-    
+
+    let i_indices = List.map (fun e ->
+        let (i_e, typ_e) = expr_to_iexpr e globales funtab in
+        if typ_e <> Int then
+          failwith "Erreur de type: L'indice de tableau n'est pas un entier"
+        ;
+        i_e
+      ) index_list in
+
     let base =
       if List.mem_assoc name !locals_env then
         let (pos, _) = List.assoc name !locals_env in
@@ -134,8 +177,8 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr
         failwith ("Tableau non déclaré : " ^ name)
     in
     
-    let addr = adresse_tableau base indices name in
-    Ivalue (Ileft (Ideref addr, 64))
+    let addr = adresse_tableau base i_indices name in
+    (Ivalue (Ileft (Ideref addr, 64)), Int) (*Par default on va chercher un int*)
 
   | Sizeof (tname, _) ->
     let size =
@@ -143,25 +186,41 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) : iexpr
       | "int" | "int*" -> 8
       | _ -> failwith ("sizeof: type inconnu " ^ tname)
     in
-    Ivalue (Iconst size)
+    (Ivalue (Iconst size), Int)
 
   | Malloc (size_expr, _) ->
-    let size_iexpr = expr_to_iexpr size_expr globales in
-    Icall ("malloc", [size_iexpr])
+    let (i_size, typ_size) = expr_to_iexpr size_expr globales funtab in
+    if typ_size <> Int then
+        failwith "Erreur de type: La taille pour malloc n'est pas un entier"
+    ;
+    (Icall ("malloc", [i_size]), Ptr) (* Le résultat est Ptr *)
 
   (*renvoie une liste de iAST*)
-let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST list =
+let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) (funtab : (string * fun_types) list) (current_fun_return_type : var_type) : iAST list =
   match s with
-  | Print (e, _) -> let v = expr_to_iexpr e globales in
-      [ Iassign ((Ireg "rsi", 64), v); 
+  | Print (e, _) -> 
+      let (v1, t1) = expr_to_iexpr e globales funtab in
+      if t1 <> Int then
+        failwith "Erreur de type: 'print_int' attend un entier"
+      ;
+      [ Iassign ((Ireg "rsi", 64), v1); 
         Iassign ((Ireg "rdi", 64), Ivalue ( Ileft ((Iglobal "fmt"), 64)));
         Ival (Iprint) ]
 
-  | Return (e, _) -> let v = expr_to_iexpr e globales in
-      [ Ireturn (v) ]
+  | Return (e, _) -> let (v_iexpr, v_type) = expr_to_iexpr e globales funtab in
+      if v_type <> current_fun_return_type then
+        failwith "Erreur de type: Type de retour incompatible"
+      ;
+      [ Ireturn (v_iexpr) ]
   
   | Var_affect (name, expr, _) -> 
-      let v = expr_to_iexpr expr globales in
+      (* cherche le type de la variable (destination) *)
+      let var_t = (try List.assoc name !vars_type 
+                      with Not_found -> failwith ("Variable inconnue : " ^ name)) in
+
+      let (v, t) = expr_to_iexpr expr globales funtab  in
+      if var_t <> t then
+        failwith ("Erreur de type lors de affect pour " ^ name);
 
       if List.mem_assoc name !locals_env then
         let pos = List.assoc name !locals_env in
@@ -176,30 +235,62 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST l
       else
         failwith ("Variable non declaree2: " ^ name)
   
-  | Lvar (name, _) -> let pos = (Ilocal (get_offset ()), 64) in
+  | Lvar (typ, name, _) -> let pos = (Ilocal (get_offset ()), 64) in
       locals_env := (name, pos) :: !locals_env;
-      vars_type := (name, Int) :: !vars_type;
+      vars_type := (name, typ) :: !vars_type;
       [ Iassign (pos, Ivalue (Iconst 0)) ]
 
-  | Lvar_affect (name, expr, _) -> let v = expr_to_iexpr expr globales in
+  | Lvar_affect (typ, name, expr, _) -> 
+      let (v, t) = expr_to_iexpr expr globales funtab in
+      (* On vérifie que le type déclare correspond au type de l expression *)
+      if typ <> t then
+        failwith ("Erreur de type: assignation de Lvar incompatible")
+      ;
       let pos = (Ilocal (get_offset ()), 64) in
       locals_env := (name, pos) :: !locals_env;
-      vars_type := (name, Int) :: !vars_type;
+      vars_type := (name, typ) :: !vars_type;
       [ Iassign (pos, v) ]
 
-  | Pvar_affect (expr_p, expr, _) -> let v = expr_to_iexpr expr globales in
-      let addr_iexpr = expr_to_iexpr expr_p globales in
+  | Pvar_affect (expr_p, expr, _) -> 
+      let (v, _) = expr_to_iexpr expr globales funtab in
+      let (addr_iexpr, t_addr) = expr_to_iexpr expr_p globales funtab in
+
+      if t_addr <> Ptr then
+        failwith "Erreur de type: assignation à un non-pointeur"
+      ;
+
       let pos = (Ideref addr_iexpr, 64) in
         [ Iassign (pos, v) ]
 
   | SCall (name, args, _, _) ->
-      [ Ival (Icall (name, List.map (fun arg -> expr_to_iexpr arg globales) args)) ]
-  
+      let (_, param_types) =
+        try List.assoc name funtab
+        with Not_found -> failwith ("Fonction non déclarée: " ^ name)
+      in
+      
+      if List.length args <> List.length param_types then
+        failwith ("Erreur: Mauvais nombre d'arguments pour " ^ name)
+      ;
+      
+      let i_args = List.map2 (fun arg expected_type ->
+        let (i_arg, arg_type) = expr_to_iexpr arg globales funtab in
+        if arg_type <> expected_type then
+          failwith "Erreur de type: Mauvais type d'argument"
+        ;
+        i_arg
+      ) args param_types in
+      
+      [ Ival (Icall (name, i_args)) ]
+
   | PrintfCall (format_str, e, _) ->
-      let ie = expr_to_iexpr e globales in
+      let (ie, _) = expr_to_iexpr e globales funtab in
       [ Iprintf (format_str, ie) ]
   
   | ScanfCall (format_str, e, _) ->
+      let (_, typ) = expr_to_iexpr e globales funtab in
+      if typ <> Ptr then
+         failwith "Scanf attend une adresse"
+      ;
       (match e with
        | Address (name, _) -> (*On recupere la lv (pos, size) en fonction du nom de variable*)
            let lv =
@@ -217,29 +308,38 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST l
            failwith "Scanf attend une adresse")
       
   | If (cond, then_branch, else_branch, _, _) ->
-      let cond_iexpr = expr_to_iexpr cond globales in
-      let then_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales) then_branch) in
+      let (cond_iexpr, _) = expr_to_iexpr cond globales funtab in
+
+      let then_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales funtab current_fun_return_type) then_branch) in
       let else_iasts = match else_branch with
-        | Some stmts -> List.flatten (List.map (fun s -> stmt_to_iAST s globales) stmts)
+        | Some stmts -> List.flatten (List.map (fun s -> stmt_to_iAST s globales funtab current_fun_return_type) stmts)
         | None -> []
       in
+
       let jump = get_jump_number () in
       let else_label = "else_" ^ string_of_int (jump) in
       let end_label = "end_if_" ^ string_of_int (jump) in
-      let iasts = [
+
+      [
         Icondjump (cond_iexpr, else_label)
       ] @ then_iasts @ [
         Ijump end_label;
         Ilabel else_label
       ] @ else_iasts @ [
         Ilabel end_label
-      ] in
-      iasts
+      ]
 
   | Array_affect (name, index_list, value_expr, _) ->
-    let indices = List.map (fun e -> expr_to_iexpr e globales) index_list in
+    let indices = List.map (fun e ->
+        let (i_e, typ_e) = expr_to_iexpr e globales funtab in
+        if typ_e <> Int then
+          failwith "Erreur de type: L'indice de tableau n'est pas un entier"
+        ;
+        i_e
+      ) index_list in
 
-    let value = expr_to_iexpr value_expr globales in
+    let (value, _) = expr_to_iexpr value_expr globales funtab in
+
     let base =
       if List.mem_assoc name !locals_env then
         let (pos, _) = List.assoc name !locals_env in
@@ -264,8 +364,8 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) : iAST l
     continues := start_label :: !continues;
     breaks := end_label :: !breaks;
 
-    let cond_iexpr = expr_to_iexpr cond globales in
-    let contenu_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales) contenu) in
+    let (cond_iexpr, _) = expr_to_iexpr cond globales funtab in
+    let contenu_iasts = List.flatten (List.map (fun s -> stmt_to_iAST s globales funtab current_fun_return_type) contenu) in
 
     (*On pop les derniers elts car on n'en a plus besoin*)
     continues := List.tl !continues;
@@ -313,6 +413,9 @@ let recupere_globals (p : program) : (string * int option) list =
     | Gptr (name, _) -> 
         vars_type := (name, Ptr) :: !vars_type;
       (name, None) :: acc
+    | Gvar_affect (typ, name, _, _) -> 
+        vars_type := (name, typ) :: !vars_type;
+        (name, None) :: acc
     | _ -> acc
   ) [] p
 
@@ -328,14 +431,28 @@ let init_params (params : (string * var_type) list) : unit =
 let program1_to_iprogram (p : program) : iprogram =
   print_endline "Conversion en iAST...";
   let symboles = recupere_globals p in
+
+  (*On passe une premiere fois pour recuperer les definitions de fonctions*)
+  let funtab = List.fold_left (fun acc g ->
+    match g with
+    | Function (return_typ, name, params, _, _) ->
+        if List.mem_assoc name acc then
+          failwith ("Erreur: Redéfinition de la fonction " ^ name)
+        ;
+        let param_types = List.map (fun (_, typ) -> typ) params in
+        (name, (return_typ, param_types)) :: acc
+    | _ -> acc
+  ) [] p
+  in
+
   print_endline "Conversion des fonctions...";
   let functions = List.fold_left (fun acc g ->
     match g with
-    | Function (name, vars, stmts, _) ->
+    | Function (return_typ, name, vars, stmts, _) ->
         reset_locals_env ();
         reset_get_offset ();
         init_params vars;
-        (let body = List.flatten (List.map (fun s -> stmt_to_iAST s symboles) stmts) in
+        (let body = List.flatten (List.map (fun s -> stmt_to_iAST s symboles funtab return_typ) stmts) in
  (*on garde les globales pour recuperer les valeurs dans la suite*)
         (name, body) :: acc)
     

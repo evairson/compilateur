@@ -20,8 +20,8 @@ type expr =
 type  stmt =
     | Print of expr*ppos
     | Return of expr*ppos
-    | Lvar of string*ppos
-    | Lvar_affect of string * expr * ppos
+    | Lvar of var_type*string*ppos
+    | Lvar_affect of var_type*string * expr * ppos
     | Var_affect of string * expr * ppos
     | Pvar_affect of expr * expr * ppos
     | SCall of string * expr list * ppos * ppos
@@ -44,9 +44,9 @@ and seq = stmt list
 type params = (string * var_type) list
 
 type gdef =
-  | Function of string * params * seq * ppos
+  | Function of var_type*string * params * seq * ppos
   | Gvar of string * ppos
-  | Gvar_affect of string * expr * ppos
+  | Gvar_affect of var_type*string * expr * ppos
   | Garray of string * expr list * ppos
   | Gptr of string * ppos
 

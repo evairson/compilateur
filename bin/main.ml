@@ -1,6 +1,5 @@
 open Les_4_fantastiques
 open AST1
-(*open Typechecker*)
 open Conversion
 open Production
 
@@ -9,6 +8,7 @@ let dummy_pos = Lexing.dummy_pos
 let prog1 : program =
   [
     Function (
+      Int,
       "main",             
       [],                  
       [ Print (Cst (4, dummy_pos), dummy_pos);
@@ -54,7 +54,7 @@ let () =
   List.iter
     (fun gdef ->
       match gdef with
-      | Function (name, _arg, stmts, _) ->
+      | Function (_, name, _arg, stmts, _) ->
           Printf.printf "Function %s:\n" name;
           List.iter
             (function
@@ -67,21 +67,22 @@ let () =
       | _ -> Printf.printf "autre instruction inconnue"
     ) prog;
 
-  print_endline "Programme typé";
-  begin
-    try
-      (*type_program prog;*)
-      print_endline "Le programme est bien type"
-    with
-    | Typechecker.TypeError msg ->
-        Printf.eprintf "Erreur de typage : %s\n" msg;
-        exit 1
-    | e ->
-        Printf.eprintf "Erreur pas traitee typage : %s\n" (Printexc.to_string e);
-        exit 1
-  end;
+  let iprog =
+    begin
+      try
+        let ip = program1_to_iprogram prog in
+        print_endline "Le programme est bien type";
+        ip
+      with
+      | Failure msg -> 
+          Printf.eprintf "Erreur de typage/conversion : %s\n" msg;
+          exit 1
+      | e ->
+          Printf.eprintf "Erreur inattendue lors de la conversion : %s\n" (Printexc.to_string e);
+          exit 1
+    end
+  in
 
-  let iprog = program1_to_iprogram prog in
   print_endline "Programme parsé et converti en iAST:";
   
   let (_functions, symbols) = iprog in

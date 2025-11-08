@@ -3,7 +3,7 @@
 TEST_DIR="tests"
 
 # Liste des fichiers de tests (tous les .c)
-TESTS_FILES=("00_empty" "01_expr" "02_gvar" "03_func" "04_if" "05_AndOrNot" "06_if_rec" "07_while" "08_break_cont" "09_pointer" "10_1d_array" "13_malloc" "15_io" "14_lazy")
+TESTS_FILES=("00_empty" "01_expr" "02_gvar" "03_func" "04_if" "05_AndOrNot" "06_if_rec" "07_while" "08_break_cont" "09_pointer" "10_1d_array" "13_malloc" "15_io" "14_lazy" "11_n_d_ar")
 
 # Compteurs
 passed=0

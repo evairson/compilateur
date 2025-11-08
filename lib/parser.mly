@@ -1,181 +1,186 @@
-/* Analyseur syntaxique pour notre langage */
+  /* Analyseur syntaxique pour notre langage */
 
-%{
-  open AST1
-%}
+  %{
+    open AST1
+  %}
 
-%token <int> CST
-%token <string> IDENT
-%token EOF
-%token LP RP LB RB SEMI COMMA TINT
-%token BEGIN END
-%token PLUS MINUS DIV REM
+  %token <int> CST
+  %token <string> IDENT
+  %token EOF
+  %token LP RP LB RB SEMI COMMA TINT
+  %token BEGIN END
+  %token PLUS MINUS DIV REM
 
-%token PRINT
-%token AFFECT
+  %token PRINT
+  %token AFFECT
 
-%token LT LE GT GE EQ NEQ EQS NEQS
+  %token LT LE GT GE EQ NEQ EQS NEQS
 
-%token AND OR NOT
+  %token AND OR NOT
 
-%token IF ELSE WHILE RETURN BREAK CONTINUE
+  %token IF ELSE WHILE RETURN BREAK CONTINUE
 
-%token PRINTF SCANF
-%token <string> STRING
+  %token PRINTF SCANF
+  %token <string> STRING
 
-%token STAR ADDRESS MALLOC SIZEOF
-
-
-/* priorites et associativites des tokens */
-
-%left OR
-%left AND
-%left EQ NEQ EQS NEQS
-%left LT LE GT GE
-%left PLUS MINUS
-%left STAR DIV REM
-
-%nonassoc NOT
-%nonassoc uminus
-
-/* Point d'entree de la grammaire */
-%start prog
-
-/* Type des valeurs retournees par l'analyseur syntaxique */
-
-%type <AST1.program> prog
-%type <AST1.gdef> gdef
-%type <AST1.expr> expr
-%type <AST1.stmt> stmt
-%type <AST1.seq> seq
+  %token STAR ADDRESS MALLOC SIZEOF
 
 
-%%
+  /* priorites et associativites des tokens */
+
+  %left OR
+  %left AND
+  %left EQ NEQ EQS NEQS
+  %left LT LE GT GE
+  %left PLUS MINUS
+  %left STAR DIV REM
+
+  %nonassoc NOT
+  %nonassoc uminus
+
+  /* Point d'entree de la grammaire */
+  %start prog
+
+  /* Type des valeurs retournees par l'analyseur syntaxique */
+
+  %type <AST1.program> prog
+  %type <AST1.gdef> gdef
+  %type <AST1.expr> expr
+  %type <AST1.stmt> stmt
+  %type <AST1.seq> seq
 
 
+  %%
 
-prog:
-  | p = list_gdef EOF { p }
-;
-
-
-list_gdef :
-  | g = gdef { [g] }
-  | lgdef = list_gdef g = gdef {lgdef @ [g]}
-;
-
-params :
-  | TINT id=IDENT { [(id, Int)] }
-  | TINT STAR id=IDENT { [(id, Ptr)] }
-  | p=params COMMA TINT id=IDENT { p @ [(id, Int)] }
-  | p=params COMMA TINT STAR id=IDENT { p @ [(id, Ptr)] }
-
-gdef:
-  
-  | TINT id1=IDENT LP RP BEGIN s = seq END { Function (id1, [], s, snd $loc) }
-  | TINT id1=IDENT LP p=params RP BEGIN s = seq END { Function (id1, p, s, snd $loc) }
-  // |TINT id=IDENT LP RP BEGIN s=seq END { Function  (id,None,s,snd $loc) }
-  // |TINT id1=IDENT LP TINT params=param_list RP LB s = seq RB { Function (id1, Some params, s, snd $loc) }
-  | TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
-  | TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
-  | id=IDENT AFFECT e=expr SEMI { Gvar_affect(id, e, snd $loc) }
-  | TINT id=IDENT taille=taille_ou_pos SEMI { Garray(id, taille, snd $loc) }
-  | TINT STAR id=IDENT SEMI { Gptr(id, snd $loc) }
+  prog:
+    | p = list_gdef EOF { p }
+  ;
 
 
-;
+  list_gdef :
+    | g = gdef { [g] }
+    | lgdef = list_gdef g = gdef {lgdef @ [g]}
+  ;
+
+  params :
+    | TINT id=IDENT { [(id, Int)] }
+    | TINT STAR id=IDENT { [(id, Ptr)] }
+    | p=params COMMA TINT id=IDENT { p @ [(id, Int)] }
+    | p=params COMMA TINT STAR id=IDENT { p @ [(id, Ptr)] }
+
+  gdef:
+    
+    | TINT id1=IDENT LP RP BEGIN s = seq END { Function (Int, id1, [], s, snd $loc) }
+    | TINT id1=IDENT LP p=params RP BEGIN s = seq END { Function (Int, id1, p, s, snd $loc) }
+    (*type de retour de fonction : pointeur*)
+    | TINT STAR id1=IDENT LP RP BEGIN s = seq END { Function (Ptr, id1, [], s, snd $loc) }
+    | TINT STAR id1=IDENT LP p=params RP BEGIN s = seq END { Function (Ptr, id1, p, s, snd $loc) }
+
+    | TINT id=IDENT SEMI { Gvar(id, snd $loc) }  
+    | TINT id=IDENT AFFECT e=expr SEMI { Gvar_affect(Int, id, e, snd $loc) }
+    | TINT STAR id=IDENT AFFECT e=expr SEMI { Gvar_affect(Ptr, id, e, snd $loc) }
+    | id=IDENT AFFECT e=expr SEMI { Gvar_affect(Int, id, e, snd $loc) }
+    | TINT id=IDENT taille=taille_ou_pos SEMI { Garray(id, taille, snd $loc) }
+    | TINT STAR id=IDENT SEMI { Gptr(id, snd $loc) }
 
 
-expr:
-| c = CST                        { Cst(c,snd $loc) }
-| e1 = expr o = op e2 = expr     { Binop (o, e1, e2, snd $loc) }
-| MINUS e = expr %prec uminus  { Unop(Opp, e, snd $loc) }
-| LP e=expr RP { e }
-| NOT e = expr  { Unop(Not, e, snd $loc) }
-| i=IDENT { Var(i,snd $loc) }
-| id=IDENT LP RP {Call(id,[],fst $loc,snd $loc)}
-| id=IDENT LP args=arg_list RP {Call(id,args,fst $loc, snd $loc)}
-
-| STAR LP id=IDENT RP { Deref(Var(id,snd $loc), snd $loc) }
-| STAR id=IDENT { Deref(Var(id,snd $loc), snd $loc) }
-| STAR LP id=IDENT PLUS e=expr RP { Deref(Binop(Plus, Var(id,snd $loc), e, snd $loc), snd $loc) }
-| STAR LP id=IDENT MINUS e=expr RP { Deref(Binop(Minus, Var(id,snd $loc), e, snd $loc), snd $loc) }
-| ADDRESS id=IDENT { Address(id, snd $loc) }
-| id=IDENT pos=taille_ou_pos { Array_get (id, pos, snd $loc) }
-
-// | LB args=arg_list RB { Array(args,snd $loc) }
-
-| MALLOC LP e=expr RP { Malloc(e, snd $loc) }
-| SIZEOF LP TINT RP { Sizeof("int", snd $loc) }
-| SIZEOF LP TINT STAR RP { Sizeof("int*", snd $loc) }
+  ;
 
 
-;
+  expr:
+  | c = CST                        { Cst(c,snd $loc) }
+  | e1 = expr o = op e2 = expr     { Binop (o, e1, e2, snd $loc) }
+  | MINUS e = expr %prec uminus  { Unop(Opp, e, snd $loc) }
+  | LP e=expr RP { e }
+  | NOT e = expr  { Unop(Not, e, snd $loc) }
+  | i=IDENT { Var(i,snd $loc) }
+  | id=IDENT LP RP {Call(id,[],fst $loc,snd $loc)}
+  | id=IDENT LP args=arg_list RP {Call(id,args,fst $loc, snd $loc)}
 
-arg_list:
-  |e=expr {[e]}
-  |l=arg_list COMMA e=expr {l@[e]}
+  | STAR LP id=IDENT RP { Deref(Var(id,snd $loc), snd $loc) }
+  | STAR id=IDENT { Deref(Var(id,snd $loc), snd $loc) }
+  | STAR LP id=IDENT PLUS e=expr RP { Deref(Binop(Plus, Var(id,snd $loc), e, snd $loc), snd $loc) }
+  | STAR LP id=IDENT MINUS e=expr RP { Deref(Binop(Minus, Var(id,snd $loc), e, snd $loc), snd $loc) }
+  | ADDRESS id=IDENT { Address(id, snd $loc) }
+  | id=IDENT pos=taille_ou_pos { Array_get (id, pos, snd $loc) }
 
-;
+  // | LB args=arg_list RB { Array(args,snd $loc) }
 
-taille_ou_pos : 
-  | LB e=expr RB { [e] }
-  | l=taille_ou_pos LB e=expr RB {l@[e]}
-
-
-stmt:
-| PRINT LP e = expr RP SEMI { Print(e,snd $loc) }
-| RETURN e = expr SEMI { Return(e,snd $loc) }
-| TINT id=IDENT SEMI { Lvar(id, snd $loc) }
-| TINT id=IDENT AFFECT e=expr SEMI { Lvar_affect(id, e, snd $loc) }
-| id=IDENT AFFECT e=expr SEMI {Var_affect(id, e, snd $loc)}
-| id=IDENT LP RP SEMI {SCall(id,[],fst $loc,snd $loc)}
-| id=IDENT LP args=arg_list RP SEMI {SCall(id,args,fst $loc, snd $loc)}
-| STAR LP id=IDENT RP AFFECT e2=expr SEMI { Pvar_affect(Var(id,snd $loc), e2, snd $loc)}
-| STAR id=IDENT AFFECT e2=expr SEMI { Pvar_affect(Var(id,snd $loc), e2, snd $loc)}
-| STAR LP id=IDENT PLUS e1=expr RP AFFECT e2=expr SEMI { Pvar_affect(Binop(Plus, Var(id,snd $loc), e1, snd $loc), e2, snd $loc)}
-| STAR LP id=IDENT MINUS e1=expr RP AFFECT e2=expr SEMI { Pvar_affect(Binop(Minus, Var(id,snd $loc), e1, snd $loc), e2, snd $loc)}
-| IF LP e = expr RP BEGIN s=seq END { If(e,s,None,fst $loc, snd $loc)}
-| IF LP e = expr RP BEGIN s1=seq END ELSE BEGIN s2=seq END { If(e,s1,Some s2,fst $loc, snd $loc)}
-| WHILE LP e=expr RP BEGIN s=seq END {While(e,s,fst $loc,snd $loc)}
-
-| BREAK SEMI {Break(snd $loc)}
-| CONTINUE SEMI {Continue(snd $loc)}
-
-| PRINTF LP s=STRING COMMA e=expr RP SEMI
-    { PrintfCall (s, e, snd $loc) }
-| SCANF LP s=STRING COMMA e=expr RP SEMI
-    { ScanfCall (s, e, snd $loc) }
-
-// | TINT STAR id=IDENT SEMI { Lvar_p(id, snd $loc) }
-// | STAR id=IDENT AFFECT e=expr SEMI {Var_affect_p(id, e, snd $loc)}
-// | TINT STAR id=IDENT AFFECT e=expr SEMI { Lvar_affect_p(id, e, snd $loc) }
-
-| id=IDENT pos=taille_ou_pos AFFECT e=expr SEMI { Array_affect(id, pos, e, snd $loc) }
-
-;
-
-seq:
-| s=stmt { [s] }
-| s=seq s2=stmt { s @ [s2] }
-;
+  | MALLOC LP e=expr RP { Malloc(e, snd $loc) }
+  | SIZEOF LP TINT RP { Sizeof("int", snd $loc) }
+  | SIZEOF LP TINT STAR RP { Sizeof("int*", snd $loc) }
 
 
-%inline op:
-| PLUS  { Plus }
-| MINUS { Minus }
-| STAR   { Mul }
-| DIV   { Div }
-| REM   { Rem }
-| LT { Lt }
-| LE   { Le }
-| GT   { Gt }
-| GE   { Ge }
-| EQ { Eq }
-| NEQ   { Neq }
-| AND   { And }
-| OR   { Or }
-| EQS   { Eqs }
-| NEQS   { Neqs }
+  ;
 
-;
+  arg_list:
+    |e=expr {[e]}
+    |l=arg_list COMMA e=expr {l@[e]}
+
+  ;
+
+  taille_ou_pos : 
+    | LB e=expr RB { [e] }
+    | l=taille_ou_pos LB e=expr RB {l@[e]}
+
+
+  stmt:
+  | PRINT LP e = expr RP SEMI { Print(e,snd $loc) }
+  | RETURN e = expr SEMI { Return(e,snd $loc) }
+  | TINT id=IDENT SEMI { Lvar(Int, id, snd $loc) }
+  | TINT id=IDENT AFFECT e=expr SEMI { Lvar_affect(Int, id, e, snd $loc) }
+  (*lvar de type pointeur*)
+  | TINT STAR id=IDENT SEMI { Lvar(Ptr, id, snd $loc) }
+  | TINT STAR id=IDENT AFFECT e=expr SEMI { Lvar_affect(Ptr, id, e, snd $loc) }
+
+  | id=IDENT AFFECT e=expr SEMI {Var_affect(id, e, snd $loc)}
+  | id=IDENT LP RP SEMI {SCall(id,[],fst $loc,snd $loc)}
+  | id=IDENT LP args=arg_list RP SEMI {SCall(id,args,fst $loc, snd $loc)}
+  | STAR LP id=IDENT RP AFFECT e2=expr SEMI { Pvar_affect(Var(id,snd $loc), e2, snd $loc)}
+  | STAR id=IDENT AFFECT e2=expr SEMI { Pvar_affect(Var(id,snd $loc), e2, snd $loc)}
+  | STAR LP id=IDENT PLUS e1=expr RP AFFECT e2=expr SEMI { Pvar_affect(Binop(Plus, Var(id,snd $loc), e1, snd $loc), e2, snd $loc)}
+  | STAR LP id=IDENT MINUS e1=expr RP AFFECT e2=expr SEMI { Pvar_affect(Binop(Minus, Var(id,snd $loc), e1, snd $loc), e2, snd $loc)}
+  | IF LP e = expr RP BEGIN s=seq END { If(e,s,None,fst $loc, snd $loc)}
+  | IF LP e = expr RP BEGIN s1=seq END ELSE BEGIN s2=seq END { If(e,s1,Some s2,fst $loc, snd $loc)}
+  | WHILE LP e=expr RP BEGIN s=seq END {While(e,s,fst $loc,snd $loc)}
+
+  | BREAK SEMI {Break(snd $loc)}
+  | CONTINUE SEMI {Continue(snd $loc)}
+
+  | PRINTF LP s=STRING COMMA e=expr RP SEMI
+      { PrintfCall (s, e, snd $loc) }
+  | SCANF LP s=STRING COMMA e=expr RP SEMI
+      { ScanfCall (s, e, snd $loc) }
+
+  // | TINT STAR id=IDENT SEMI { Lvar_p(id, snd $loc) }
+  // | STAR id=IDENT AFFECT e=expr SEMI {Var_affect_p(id, e, snd $loc)}
+  // | TINT STAR id=IDENT AFFECT e=expr SEMI { Lvar_affect_p(id, e, snd $loc) }
+
+  | id=IDENT pos=taille_ou_pos AFFECT e=expr SEMI { Array_affect(id, pos, e, snd $loc) }
+
+  ;
+
+  seq:
+  | s=stmt { [s] }
+  | s=seq s2=stmt { s @ [s2] }
+  ;
+
+
+  %inline op:
+  | PLUS  { Plus }
+  | MINUS { Minus }
+  | STAR   { Mul }
+  | DIV   { Div }
+  | REM   { Rem }
+  | LT { Lt }
+  | LE   { Le }
+  | GT   { Gt }
+  | GE   { Ge }
+  | EQ { Eq }
+  | NEQ   { Neq }
+  | AND   { And }
+  | OR   { Or }
+  | EQS   { Eqs }
+  | NEQS   { Neqs }
+
+  ;
