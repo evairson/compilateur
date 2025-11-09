@@ -30,7 +30,10 @@ let get_jump_number () : int =
 let array_dims : (string * int list) list ref = ref []
 
 let adresse_tableau base indices name =
-  let d = List.assoc name !array_dims in
+  let d =
+    try List.assoc name !array_dims
+    with Not_found -> [1] 
+  in
   let rec tab_offset dimensions indices =
     match dimensions,indices with
     | [], [] -> Ivalue (Iconst 0)
