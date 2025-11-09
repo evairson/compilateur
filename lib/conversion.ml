@@ -103,7 +103,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab
         if List.mem_assoc name !vars_type then
           let typ = List.assoc name !vars_type in
           (match typ with
-          | Ptr -> Ivalue (Ileft (Iglobal name, 64))
+          | Ptr -> Ivalue (Ileft (IAddrG name, 64))
           | Int -> Ivalue (Ileft (Iglobal name, 64)))
         else
           Ivalue (Ileft (Iglobal name, 64))
