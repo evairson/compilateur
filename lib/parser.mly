@@ -132,7 +132,7 @@
   (*lvar de type pointeur*)
   | TINT STAR id=IDENT SEMI { Lvar(Ptr, id, snd $loc) }
   | TINT STAR id=IDENT AFFECT e=expr SEMI { Lvar_affect(Ptr, id, e, snd $loc) }
-
+  | TINT id=IDENT taille=taille_ou_pos SEMI { Larray(id, taille, snd $loc) }
   | id=IDENT AFFECT e=expr SEMI {Var_affect(id, e, snd $loc)}
   | id=IDENT LP RP SEMI {SCall(id,[],fst $loc,snd $loc)}
   | id=IDENT LP args=arg_list RP SEMI {SCall(id,args,fst $loc, snd $loc)}

@@ -131,7 +131,19 @@ let rec compile_expr (e : iexpr) : string =
               end
         end
 
-  | Icall (name, args) ->
+| Icall (name, args) ->
+    (match name with
+    | "malloc" ->
+          (match args with
+          | [size_expr] ->
+              let size_code = compile_expr size_expr in
+              size_code ^
+              "   pop %rdi\n" ^  (* argument pour malloc *)
+              "   call malloc\n" ^
+              "   push %rax\n"
+          | _ -> failwith "malloc prend un seul argument")
+      
+    | _ -> (
     let args_code =
         List.rev_map (fun arg ->
           let v_code = compile_expr arg in
@@ -144,7 +156,7 @@ let rec compile_expr (e : iexpr) : string =
       args_code ^
       Printf.sprintf "   call %s\n" name ^
       cleanup ^
-      "   push %rax\n"
+      "   push %rax\n"))
 
   | Iprint ->
       "   and $-16, %rsp \n    xor %rax, %rax\n   call printf\n   push %rax\n"

@@ -37,4 +37,23 @@ Lorsqu'un fichier source est compilé, le compilateur génère un fichier exécu
 
 Le compilateur supporte les fonctionnalités suivantes :
 
-- 
+Les fonctionnalités de base du langage incluent :
+
+- Le type int
+- Les fonctions
+- Variables locales et globales
+- Les conditions if et if-else
+- l’arithmétique basique (+,-,*,/,%), comparaisons (===, <, <<=, >, >>=) et la logique (&&, ∣∣)
+- la fonction print_int
+
+Les extensions suivantes sont également supportées :
+
+- while, break, continue
+- les fonctions de type void
+- les pointeurs globaux et locaux
+- malloc
+- Les tableaux globales ou locales à une dimension
+- Les tableaux globales multi-dimensionnels
+- La logique paresseuse
+- Scanf et Printf
+- Un typescheck 

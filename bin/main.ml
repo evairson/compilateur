@@ -50,23 +50,6 @@ let () =
     exit 1
   in
 
-  print_endline "Programme parsé:";
-  List.iter
-    (fun gdef ->
-      match gdef with
-      | Function (_, name, _arg, stmts, _) ->
-          Printf.printf "Function %s:\n" name;
-          List.iter
-            (function
-              | Print (Cst (n, _), _) ->
-                  Printf.printf "  Print(Cst %d)\n" n
-              | Return (Cst (n, _), _) ->
-                  Printf.printf "  Return(Cst %d)\n" n
-              | _ -> Printf.printf "  Autre instruction inconnue1")
-            stmts
-      | _ -> Printf.printf "autre instruction inconnue"
-    ) prog;
-
   let iprog =
     begin
       try
@@ -82,33 +65,7 @@ let () =
           exit 1
     end
   in
-
-  print_endline "Programme parsé et converti en iAST:";
   
-  let (_functions, symbols) = iprog in
-  (*Il faut modifier l'affichage pour les iAST*)
-  (*
-  List.iter
-    (fun (name, body) ->
-      Printf.printf "Function %s:\n" name;
-      List.iter
-        (function
-          | Iassign (v, Ivalue (Iconst n), _) ->
-              Printf.printf "  Iassign(%s, Iconst %d)\n" v n
-          | Iassign (v, Ivalue (Iglobal s), _) ->
-              Printf.printf "  Iassign(%s, Iglobal %s)\n" v s
-          | Iassign (v, Ivalue (Ireg r), _) ->
-              Printf.printf "  Iassign(%s, Ireg %s)\n" v r
-          | Icall fname -> Printf.printf "  Icall(%s)\n" fname
-          | Ireturn (Ivalue (Iconst n)) -> Printf.printf "  Ireturn(Iconst %d)\n" n
-          | _ -> failwith "  Autre instruction inconnue2\n")
-        body)
-    functions;*)
-  print_endline "Symboles ";
-  List.iter (fun (name, value) -> 
-    match value with 
-    | None -> Printf.printf "%s -> None\n" name
-    | Some value -> Printf.printf "%s -> %d\n" name value) symbols;
   compile_program iprog "output.s";
   print_endline "Compilation terminée, voir output.s";
   close_in ic

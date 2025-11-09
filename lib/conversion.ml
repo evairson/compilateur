@@ -103,7 +103,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab
         if List.mem_assoc name !vars_type then
           let typ = List.assoc name !vars_type in
           (match typ with
-          | Ptr -> Ivalue (Ileft (IAddrG name, 64))
+          | Ptr -> Ivalue (Ileft (Iglobal name, 64))
           | Int -> Ivalue (Ileft (Iglobal name, 64)))
         else
           Ivalue (Ileft (Iglobal name, 64))
@@ -168,9 +168,7 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab
     let base =
       if List.mem_assoc name !locals_env then
         let (pos, _) = List.assoc name !locals_env in
-        match pos with
-          | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
-          | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
+        Ivalue (Ileft (pos, 64))
       else if List.mem_assoc name globales then
         Ivalue (Ileft (IAddrG name, 64))
       else
@@ -238,7 +236,28 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) (funtab 
   | Lvar (typ, name, _) -> let pos = (Ilocal (get_offset ()), 64) in
       locals_env := (name, pos) :: !locals_env;
       vars_type := (name, typ) :: !vars_type;
+      if typ = Ptr then
+        array_dims := (name, [1]) :: !array_dims;
       [ Iassign (pos, Ivalue (Iconst 0)) ]
+
+  | Larray (name, taille_expr_list, _) ->
+      let sizes = List.map (fun e ->
+          match e with
+          | Cst (n, _) -> n
+          | _ -> failwith "La taille du tableau doit être une constante"
+        ) taille_expr_list
+      in
+
+      let total_elems = List.fold_left ( * ) 1 sizes in
+      let total_bytes = total_elems * 8 in
+
+      let pos = (Ilocal (get_offset ()), 64) in
+      locals_env := (name, pos) :: !locals_env;
+      vars_type := (name, Ptr) :: !vars_type;
+      array_dims := (name, sizes) :: !array_dims;
+
+      let malloc_expr = Icall ("malloc", [Ivalue (Iconst total_bytes)]) in
+      [ Iassign (pos, malloc_expr) ]
 
   | Lvar_affect (typ, name, expr, _) -> 
       let (v, t) = expr_to_iexpr expr globales funtab in
@@ -343,9 +362,7 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) (funtab 
     let base =
       if List.mem_assoc name !locals_env then
         let (pos, _) = List.assoc name !locals_env in
-        match pos with
-        | Ilocal offset -> Ivalue (Ileft (IAddr offset, 64))
-        | _ -> failwith ("Cannot take address of non-local variable: " ^ name)
+        Ivalue (Ileft (pos, 64))
       else if List.mem_assoc name globales then
         Ivalue (Ileft (IAddrG name, 64))
       else
@@ -459,4 +476,3 @@ let program1_to_iprogram (p : program) : iprogram =
     | _ -> acc
   ) [] p in
   (List.rev functions, List.rev symboles)
-
