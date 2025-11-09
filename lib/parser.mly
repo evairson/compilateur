@@ -82,7 +82,6 @@
     | id=IDENT AFFECT e=expr SEMI { Gvar_affect(Int, id, e, snd $loc) }
     | TINT id=IDENT taille=taille_ou_pos SEMI { Garray(id, taille, snd $loc) }
     | TINT STAR id=IDENT SEMI { Gptr(id, snd $loc) }
-    | DIV DIV { () }  // commentaire sur une ligne
 
 
   ;
