@@ -66,6 +66,6 @@ let () =
     end
   in
   
-  compile_program iprog "output.s";
-  print_endline "Compilation terminée, voir output.s";
+  compile_program iprog "output/output.s";
+  print_endline "Compilation terminée, voir output/output.s";
   close_in ic
