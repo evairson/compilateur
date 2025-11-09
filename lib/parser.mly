@@ -82,6 +82,7 @@
     | id=IDENT AFFECT e=expr SEMI { Gvar_affect(Int, id, e, snd $loc) }
     | TINT id=IDENT taille=taille_ou_pos SEMI { Garray(id, taille, snd $loc) }
     | TINT STAR id=IDENT SEMI { Gptr(id, snd $loc) }
+    | DIV DIV { () }  // commentaire sur une ligne
 
 
   ;
@@ -143,7 +144,7 @@
   | IF LP e = expr RP BEGIN s=seq END { If(e,s,None,fst $loc, snd $loc)}
   | IF LP e = expr RP BEGIN s1=seq END ELSE BEGIN s2=seq END { If(e,s1,Some s2,fst $loc, snd $loc)}
   | WHILE LP e=expr RP BEGIN s=seq END {While(e,s,fst $loc,snd $loc)}
-
+  | DIV DIV { () }  // commentaire sur une ligne
   | BREAK SEMI {Break(snd $loc)}
   | CONTINUE SEMI {Continue(snd $loc)}
 

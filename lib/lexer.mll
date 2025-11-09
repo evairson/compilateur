@@ -60,6 +60,7 @@ rule token = parse
   | ident    { IDENT (lexeme lexbuf) }
   | '"'     { read_string (Buffer.create 16) lexbuf } (*detection debut chaine de charactere pour les formats*)
   | space+   { token lexbuf }
+  | "//" [^ '\n']* '\n' { token lexbuf }  (* commentaire sur une ligne *)
   | eof      { EOF }
 
   | ['\n']            { new_line lexbuf; token lexbuf }

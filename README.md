@@ -56,4 +56,4 @@ Les extensions suivantes sont également supportées :
 - Les tableaux globales multi-dimensionnels
 - La logique paresseuse
 - Scanf et Printf
-- Un typescheck 
+- Un typechecker pour vérifier la cohérence des types dans le programme source
