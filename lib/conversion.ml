@@ -103,13 +103,30 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab
         Ivalue (Ileft pos)
 
       else if List.mem_assoc name globales then
-        if List.mem_assoc name !vars_type then
-          let typ = List.assoc name !vars_type in
-          (match typ with
-          | Ptr -> Ivalue (Ileft (IAddrG name, 64))
-          | Int -> Ivalue (Ileft (Iglobal name, 64)))
-        else
-          Ivalue (Ileft (Iglobal name, 64))
+         Ivalue (Ileft (Iglobal name, 64))
+      
+      else
+        failwith ("Variable non declaree1: " ^ name)
+    in
+    (e_iexpr, typ)
+
+  | Pvar (name, _) ->
+    let typ = 
+        try List.assoc name !vars_type 
+        with Not_found -> failwith ("Type inconnu pour cette variable : " ^ name)
+    in
+
+    let e_iexpr = 
+      if List.mem_assoc name !locals_env then
+        let pos = List.assoc name !locals_env in
+        Ivalue (Ileft pos)
+      
+      else if List.mem_assoc name !params_env then
+        let pos = List.assoc name !params_env in
+        Ivalue (Ileft pos)
+
+      else if List.mem_assoc name globales then
+        Ivalue (Ileft (Iglobal name, 64))
       
       else
         failwith ("Variable non declaree1: " ^ name)
@@ -169,13 +186,24 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab
       ) index_list in
 
     let base =
-      if List.mem_assoc name !locals_env then
-        let (pos, _) = List.assoc name !locals_env in
-        Ivalue (Ileft (pos, 64))
-      else if List.mem_assoc name globales then
-        Ivalue (Ileft (IAddrG name, 64))
+        if List.mem_assoc name !locals_env then
+          let (pos, _) = List.assoc name !locals_env in
+          (* local: on charge la valeur (un pointeur si c'est un ptr/local array) *)
+          Ivalue (Ileft (pos, 64))
+        else if List.mem_assoc name globales then
+        if List.mem_assoc name !array_dims then
+          Ivalue (Ileft (IAddrG name, 64))
+        else
+          let t =
+            try List.assoc name !vars_type with Not_found ->
+              failwith ("Array_get sur globale inconnue : " ^ name)
+          in
+          match t with
+          | Ptr -> Ivalue (Ileft (Iglobal name, 64))
+          | _ ->
+            failwith ("Array_get sur non-tableau/non-pointeur global : " ^ name)
       else
-        failwith ("Tableau non déclaré : " ^ name)
+        failwith ("Tableau/pointeur non déclaré : " ^ name)
     in
     
     let addr = adresse_tableau base i_indices name in
@@ -367,9 +395,19 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) (funtab 
         let (pos, _) = List.assoc name !locals_env in
         Ivalue (Ileft (pos, 64))
       else if List.mem_assoc name globales then
-        Ivalue (Ileft (IAddrG name, 64))
+        if List.mem_assoc name !array_dims then
+          Ivalue (Ileft (IAddrG name, 64))   (* vrai tableau global *)
+        else
+          let t =
+            try List.assoc name !vars_type with Not_found ->
+              failwith ("Array_affect sur globale inconnue : " ^ name)
+          in
+          match t with
+          | Ptr -> Ivalue (Ileft (Iglobal name, 64))  (* pointeur global *)
+          | _ ->
+            failwith ("Array_affect sur non-tableau/non-pointeur global : " ^ name)
       else
-        failwith ("Tableau non déclaré : " ^ name)
+        failwith ("Tableau/pointeur non déclaré : " ^ name)
     in
     let addr = adresse_tableau base indices name in
     [ Iassign ((Ideref addr, 64), value) ]

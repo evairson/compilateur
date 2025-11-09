@@ -15,6 +15,7 @@ type expr =
   | Array_get of string * expr list * ppos
   | Malloc of expr * ppos
   | Sizeof of string * ppos
+  | Pvar of string * ppos 
 
 
 type  stmt =
