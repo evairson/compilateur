@@ -101,6 +101,10 @@
   | STAR id=IDENT { Deref(Pvar(id,snd $loc), snd $loc) }
   | STAR LP id=IDENT PLUS e=expr RP { Deref(Binop(Plus, Pvar(id,snd $loc), e, snd $loc), snd $loc) }
   | STAR LP id=IDENT MINUS e=expr RP { Deref(Binop(Minus, Pvar(id,snd $loc), e, snd $loc), snd $loc) }
+  | STAR LP id=IDENT taille=taille_ou_pos RP { Deref(Array_get (id, taille, snd $loc), snd $loc) }
+  | STAR id=IDENT taille=taille_ou_pos { Deref(Array_get (id, taille, snd $loc), snd $loc) }
+  | STAR LP id=IDENT taille=taille_ou_pos PLUS e=expr RP { Deref(Binop(Plus, Array_get (id, taille, snd $loc), e, snd $loc), snd $loc) }
+  | STAR LP id=IDENT taille=taille_ou_pos MINUS e=expr RP { Deref(Binop(Minus, Array_get (id, taille, snd $loc), e, snd $loc), snd $loc) }
   | ADDRESS id=IDENT { Address(id, snd $loc) }
   | id=IDENT pos=taille_ou_pos { Array_get (id, pos, snd $loc) }
 
@@ -140,6 +144,10 @@
   | STAR id=IDENT AFFECT e2=expr SEMI { Pvar_affect(Var(id,snd $loc), e2, snd $loc)}
   | STAR LP id=IDENT PLUS e1=expr RP AFFECT e2=expr SEMI { Pvar_affect(Binop(Plus, Pvar(id,snd $loc), e1, snd $loc), e2, snd $loc)}
   | STAR LP id=IDENT MINUS e1=expr RP AFFECT e2=expr SEMI { Pvar_affect(Binop(Minus, Pvar(id,snd $loc), e1, snd $loc), e2, snd $loc)}
+  | STAR LP id=IDENT taille=taille_ou_pos RP AFFECT e2=expr SEMI { Pvar_affect(Array_get (id, taille, snd $loc), e2, snd $loc)}
+  | STAR id=IDENT taille=taille_ou_pos AFFECT e2=expr SEMI { Pvar_affect(Array_get (id, taille, snd $loc), e2, snd $loc)}
+  | STAR LP id=IDENT taille=taille_ou_pos PLUS e1=expr RP AFFECT e2=expr SEMI { Pvar_affect(Binop(Plus, Array_get (id, taille, snd $loc), e1, snd $loc), e2, snd $loc)}
+  | STAR LP id=IDENT taille=taille_ou_pos MINUS e1=expr RP AFFECT e2=expr SEMI { Pvar_affect(Binop(Minus, Array_get (id, taille, snd $loc), e1, snd $loc), e2, snd $loc)}
   | IF LP e = expr RP BEGIN s=seq END { If(e,s,None,fst $loc, snd $loc)}
   | IF LP e = expr RP BEGIN s1=seq END ELSE BEGIN s2=seq END { If(e,s1,Some s2,fst $loc, snd $loc)}
   | WHILE LP e=expr RP BEGIN s=seq END {While(e,s,fst $loc,snd $loc)}

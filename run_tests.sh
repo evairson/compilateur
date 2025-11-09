@@ -1,7 +1,8 @@
 TEST_DIR="tests"
 
 TESTS_FILES=("00_empty" "01_expr" "02_gvar" "03_func" "04_if" "05_AndOrNot" "06_if_rec" "07_while" 
-"08_break_cont" "09_pointer" "10_1d_array" "11_n_d_ar" "13_malloc" "15_io" "14_lazy" "19_no_return"
+"08_break_cont" "09_pointer" "10_1d_array" "11_n_d_ar" "12_ptr_ar" "13_malloc" "14_lazy" "15_io" 
+ "19_no_return"
 "tests-sup/array_local" "tests-sup/pointeur_local" "tests-sup/pointeur_local"
 )
 
@@ -25,7 +26,7 @@ for test_file in "${TESTS_FILES[@]}"; do
     else
         ./exec.sh "$test_file_path"
     fi
-    if diff output.txt "$TEST_DIR/$test_file.c.ans" >/dev/null; then
+    if diff output/output.txt "$TEST_DIR/$test_file.c.ans" >/dev/null; then
         echo " Test passed!"
         ((passed++))
     else

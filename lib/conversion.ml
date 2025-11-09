@@ -30,23 +30,28 @@ let get_jump_number () : int =
 let array_dims : (string * int list) list ref = ref []
 
 let adresse_tableau base indices name =
-  let d =
-    try List.assoc name !array_dims
-    with Not_found -> [1] 
+  let dims =
+    try List.assoc name !array_dims with Not_found -> [1]
   in
-  let rec tab_offset dimensions indices =
-    match dimensions,indices with
-    | [], [] -> Ivalue (Iconst 0)
+
+  (* offset en octets pour les indices fournis *)
+  let rec offset_of dimensions indices =
+    match dimensions, indices with
+    | _, [] -> Ivalue (Iconst 0)                (* pas d'indice => offset 0 *)
+    | [], _ -> failwith ("Trop d'indices pour " ^ name)
     | _::dims, i::ids ->
         let pas = List.fold_left (fun acc d -> acc * d) 1 dims in
-        let offset_i = Ibinop (Mul,i,Ivalue(Iconst(pas*8)))
-        in
-        Ibinop (Plus, offset_i, tab_offset dims ids)
-    | _ ->
-        failwith "la dimension ne correspond pas"
+        let offset_i = Ibinop (Mul, i, Ivalue (Iconst (pas * 8))) in
+        Ibinop (Plus, offset_i, offset_of dims ids)
   in
-  let offset = tab_offset d indices in
-  Ibinop (Plus,base,offset)
+
+  let nb_dims = List.length dims in
+  let nb_idx  = List.length indices in
+  if nb_idx > nb_dims then failwith ("Trop d'indices pour " ^ name);
+
+  let typ = if nb_idx = nb_dims then Int else Ptr in
+  let offset = offset_of dims indices in
+  (Ibinop (Plus, base, offset), typ) 
 
 
 (*on garde en memoire les debuts et fin de boucles afin de gerer les break et continue*)
@@ -103,7 +108,10 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab
         Ivalue (Ileft pos)
 
       else if List.mem_assoc name globales then
-         Ivalue (Ileft (Iglobal name, 64))
+        if List.mem_assoc name !array_dims then
+          Ivalue (Ileft (IAddrG name, 64))
+        else
+          Ivalue (Ileft (Iglobal name, 64))
       
       else
         failwith ("Variable non declaree1: " ^ name)
@@ -126,7 +134,10 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab
         Ivalue (Ileft pos)
 
       else if List.mem_assoc name globales then
-        Ivalue (Ileft (Iglobal name, 64))
+        if List.mem_assoc name !array_dims then
+          Ivalue (Ileft (IAddrG name, 64))
+        else
+          Ivalue (Ileft (Iglobal name, 64))
       
       else
         failwith ("Variable non declaree1: " ^ name)
@@ -170,10 +181,14 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab
 
   | Deref (e, _) -> (* *ptr → value at address ptr *)
       let (i_ptr, typ) = expr_to_iexpr e globales funtab in
-      if typ <> Ptr then
-        failwith "Erreur de type: Déréférencement d'un non-pointeur"
-      ;
-      (Ivalue (Ileft (Ideref i_ptr, 64)), Int) (*on pointe par defaut vers un int*)
+
+      (match typ with
+      | Ptr ->
+          (Ivalue (Ileft (Ideref i_ptr, 64)), Int)
+
+      | Int ->
+          failwith "Erreur de type: Déréférencement d'un entier"
+      )
 
   | Array_get (name, index_list, _) ->
 
@@ -206,8 +221,10 @@ let rec expr_to_iexpr (e : expr) (globales : (string * int option) list) (funtab
         failwith ("Tableau/pointeur non déclaré : " ^ name)
     in
     
-    let addr = adresse_tableau base i_indices name in
-    (Ivalue (Ileft (Ideref addr, 64)), Int) (*Par default on va chercher un int*)
+    let (addr, typ_elt) = adresse_tableau base i_indices name in
+    (match typ_elt with
+    | Int -> (Ivalue (Ileft (Ideref addr, 64)), Int)
+    | Ptr -> (addr, Ptr))
 
   | Sizeof (tname, _) ->
     let size =
@@ -409,7 +426,7 @@ let rec stmt_to_iAST (s : stmt) (globales : (string * int option) list) (funtab 
       else
         failwith ("Tableau/pointeur non déclaré : " ^ name)
     in
-    let addr = adresse_tableau base indices name in
+    let (addr, _) = adresse_tableau base indices name in
     [ Iassign ((Ideref addr, 64), value) ]
 
   | While (cond, contenu, _, _)->
@@ -467,7 +484,8 @@ let recupere_globals (p : program) : (string * int option) list =
                             ) sizes_expr
         in
         array_dims := (name, dims) :: !array_dims;
-        (name, None)::acc
+        vars_type  := (name, Ptr)  :: !vars_type;
+        (name, Some (List.fold_left ( * ) 1 dims * 8)) :: acc
     | Gptr (name, _) -> 
         vars_type := (name, Ptr) :: !vars_type;
       (name, None) :: acc
